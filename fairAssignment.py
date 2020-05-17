@@ -51,8 +51,8 @@ def plotAllObjects():
 	## Plot Hubs
 	labelHub="Hub"
 	colorHub = colors.pop()
-	for hub in r.hubs:
-		plt.plot(*hub.xy,color=colorHub,label=labelHub)
+	# for hub in r.hubs:
+	# 	plt.plot(*hub.xy,color=colorHub,label=labelHub)
 		# hub.geom.plotSelf(color = colorHub,label=labelHub)
 	# plt.plot(*r.getHubCoordinates(), color=colors.pop(),label=labelHub)
 	## Plot Individuals
@@ -75,12 +75,14 @@ def plotAllObjects():
 	## Create Legend
 	legend_dict = {artist.properties().get('label') : artist for artist in ax.collections.copy() + ax.lines.copy()}
 	plt.legend(legend_dict.values(),legend_dict.keys(),loc="upper right")
-	removeByLabel("Hub",ax)
+	# removeByLabel("Hub",ax)
 	plt.show(block=False)
 	# plt.close(fig)
 	return fig,ax
 
 
+## Uncomment to view population.
+## Comment if taking too long.
 fig,ax = plotAllObjects()
 
 # allObjects = getAllObjects(ax)
@@ -88,9 +90,7 @@ fig,ax = plotAllObjects()
 
 
 
-
-### PLOT 2: Distance Histograms
-
+### Get distances
 def get_distances_to_facilities(individuals):
 	# for individual in r.individuals:
 	# dist_to_nearest = min([individual.location.distance(hub.geom) for hub in r.hubs])
@@ -100,6 +100,8 @@ subPops = r.getAllSubpopulations()
 subPopDistances = [get_distances_to_facilities(subPop) for subPop in subPops]
 subPopColors = [colors.pop() for subpop in subPopDistances]
 
+
+### PLOT 2: Distance Histograms
 def plotHistogram():
 	fig, ax = plt.subplots(figsize=(10,10))
 
@@ -120,7 +122,6 @@ def plotHistogram():
 fig,ax = plotHistogram()
 
 ### PLOT 2.5: Cumulative Distance Histograms
-
 def plotCumulativeHistogram():
 	fig, ax = plt.subplots(figsize=(10,10))
 
@@ -140,10 +141,6 @@ fig,ax = plotCumulativeHistogram()
 
 
 ### PLOT 3: Empirical CDF
-
-
-
-
 def plotCDFs():
 	fig, ax = plt.subplots(figsize=(10,10))
 	plt.title(f"Distances from Nearest Facility, Empirical CDF (nIndividuals={len(r.individuals)},nFacilities={len(r.facilityLocations)})")
