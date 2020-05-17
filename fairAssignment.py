@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from objects import CategoricalFeatureDistribution, MixtureDistribution, Populace, Region
 from plot_utilities import removeByLabel,addByLabel,getAllObjects
 matplotlib.use('TKAgg') #easier window management when not using IPython
-matplotlib.rcParams['text.usetex'] = True
+# matplotlib.rcParams['text.usetex'] = True
 number_desired_colors = 12 # https://matplotlib.org/tutorials/colors/colormaps.ht
 cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
 colors = [cmap(i) for i in range(number_desired_colors)]
