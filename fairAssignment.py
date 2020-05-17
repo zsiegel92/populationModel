@@ -5,7 +5,7 @@ from objects import CategoricalFeatureDistribution, MixtureDistribution, Populac
 from plot_utilities import removeByLabel,addByLabel,getAllObjects
 matplotlib.use('TKAgg') #easier window management when not using IPython
 matplotlib.rcParams['text.usetex'] = True
-number_desired_colors = 8 # https://matplotlib.org/tutorials/colors/colormaps.ht
+number_desired_colors = 12 # https://matplotlib.org/tutorials/colors/colormaps.ht
 cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
 colors = [cmap(i) for i in range(number_desired_colors)]
 
@@ -18,8 +18,8 @@ theta_p_type1_value = 1
 theta_u_type2_value = 20
 theta_p_type2_value = 20
 
-density = 1/10000
-sizeRegion = 5000
+density = 1/5000
+sizeRegion = 1000
 sizeHub = sizeRegion/25
 # nPop = 10000
 nPop = int(sizeRegion * sizeRegion * density)
@@ -27,7 +27,7 @@ nPerHub = 4
 nFacilities = int(nPop/100)
 
 
-## Instantiate subpopulations
+## Instantiate subpopulations and Facilities
 featureDistribution1 = CategoricalFeatureDistribution(theta_u_type1_value,theta_p_type1_value)
 featureDistribution2 = CategoricalFeatureDistribution(theta_u_type2_value,theta_p_type2_value)
 mixtureDistribution = MixtureDistribution([featureDistribution1,featureDistribution2],[0.95,0.05])
@@ -75,6 +75,7 @@ def plotAllObjects():
 	## Create Legend
 	legend_dict = {artist.properties().get('label') : artist for artist in ax.collections.copy() + ax.lines.copy()}
 	plt.legend(legend_dict.values(),legend_dict.keys(),loc="upper right")
+	removeByLabel("Hub",ax)
 	plt.show(block=False)
 	# plt.close(fig)
 	return fig,ax
@@ -83,7 +84,6 @@ def plotAllObjects():
 fig,ax = plotAllObjects()
 
 # allObjects = getAllObjects(ax)
-removeByLabel("Hub",ax)
 # addByLabel("Hub",ax,allObjects)
 
 
