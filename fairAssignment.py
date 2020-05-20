@@ -51,10 +51,11 @@ def plotAllObjects():
 	## Plot Hubs
 	labelHub="Hub"
 	colorHub = colors.pop()
-	# for hub in r.hubs:
-	# 	plt.plot(*hub.xy,color=colorHub,label=labelHub)
-		# hub.geom.plotSelf(color = colorHub,label=labelHub)
-	# plt.plot(*r.getHubCoordinates(), color=colors.pop(),label=labelHub)
+	def plotHubs():
+		# for hub in r.hubs:
+			# plt.plot(*hub.xy,color=colorHub,label=labelHub)
+		plt.plot(*r.getHubCoordinates(), color=colors.pop(),label=labelHub)
+	plotHubs()
 	## Plot Individuals
 	labelIndividuals = "Individual"
 	def plotIndividuals():
