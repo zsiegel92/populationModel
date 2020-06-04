@@ -2,6 +2,8 @@ from shapely.geometry import Point, Polygon,box
 import matplotlib.pyplot as plt
 import random
 import numpy as np
+from scipy.stats import truncnorm
+truncnormr = truncnorm.rvs
 
 class Parameters:
 	def __init__(self,params):
@@ -203,6 +205,32 @@ class Region:
 			individual.location = location
 			individual.hub = self.currentHub
 			self.individuals.append(individual)
+	def populate_based_on_sum_exp(self,populace):
+		individuals = populace.individuals
+		for i,individual in enumerate(individuals):
+			location = self.getOneLocationTruncRSumParams(individual)
+			individual.location = location
+			self.individuals.append(individual)
+
+	def getOneLocationTruncRSumParams(self,individual):
+		y = np.random.uniform(0,self.sizeRegion)
+		individual_score = (individual.parameters.protected + individual.parameters.protected)/5
+		scale = self.sizeRegion/4
+		loc = individual_score*self.sizeRegion
+		x = self.truncNorm(minval=0,maxval=self.sizeRegion,mode=loc,scale=scale)
+		return Point(x,y)
+
+	def truncNorm(self,minval,maxval,scale,mode):
+
+		loc = (1/2)*(mode - (minval + maxval)/2)
+		a = maxval - loc
+		b = minval - loc
+		print(f"minval: {minval}, maxval: {maxval}, mode: {mode}, scale: {scale}")
+		print(f"a: {a}, b: {b}, loc: {loc}, scale: {scale}")
+		return truncnormr(a=a,b=b,loc=loc,scale=scale)
+	# r.truncNorm(minval=0,maxval=10,mode=5,scale=1)
+
+
 	def generateFacilities(self,nFacilities):
 		for _ in range(nFacilities):
 			self.facilityLocations.append(self.geom.uniformlyRandomInteriorPoint())
@@ -217,6 +245,14 @@ class Region:
 		# for i,individual in enumerate(self.individuals):
 		#   if indiv_probs
 		#   pass
+	def generateFacilitiesBasedOnTruncNorm(self,nFacilities):
+		for i in range(nFacilities):
+			y = np.random.uniform(0,self.sizeRegion)
+			score = 1
+			scale = self.sizeRegion/4
+			loc = score*self.sizeRegion
+			x = self.truncNorm(minval=0,maxval=self.sizeRegion,mode=loc,scale=scale)
+			self.facilityLocations.append(Point(x,y))
 class Hub:
 	def __init__(self,population,hubSize,center):
 		self.individualLocations = []
