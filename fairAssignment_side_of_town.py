@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
-from objects import CategoricalFeatureDistribution, MixtureDistribution, Populace, Region
+from objects_side_of_town import CategoricalFeatureDistribution, MixtureDistribution, Populace, Region
 from plot_utilities import removeByLabel,addByLabel,getAllObjects
 matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
-number_desired_colors = 12 # https://matplotlib.org/tutorials/colors/colormaps.ht
+number_desired_colors = 8 # https://matplotlib.org/tutorials/colors/colormaps.ht
 cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
 colors = [cmap(i) for i in range(number_desired_colors)]
 
@@ -48,14 +48,6 @@ def plotAllObjects():
 	## Plot Region
 	labelRegion="Region"
 	plt.plot(*r.getExteriorCoords(),color=colors.pop(),label=labelRegion)
-	## Plot Hubs
-	labelHub="Hub"
-	colorHub = colors.pop()
-	def plotHubs():
-		# for hub in r.hubs:
-			# plt.plot(*hub.xy,color=colorHub,label=labelHub)
-		plt.plot(*r.getHubCoordinates(), color=colors.pop(),label=labelHub)
-	plotHubs()
 	## Plot Individuals
 	labelIndividuals = "Individual"
 	def plotIndividuals():
@@ -76,7 +68,6 @@ def plotAllObjects():
 	## Create Legend
 	legend_dict = {artist.properties().get('label') : artist for artist in ax.collections.copy() + ax.lines.copy()}
 	plt.legend(legend_dict.values(),legend_dict.keys(),loc="upper right")
-	# removeByLabel("Hub",ax)
 	plt.show(block=False)
 	# plt.close(fig)
 	return fig,ax
