@@ -5,7 +5,7 @@ from objects_side_of_town import CategoricalFeatureDistribution, MixtureDistribu
 from plot_utilities import removeByLabel,addByLabel,getAllObjects
 matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
-number_desired_colors = 8 # https://matplotlib.org/tutorials/colors/colormaps.ht
+number_desired_colors = 6 # https://matplotlib.org/tutorials/colors/colormaps.ht
 cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
 colors = [cmap(i) for i in range(number_desired_colors)]
 
