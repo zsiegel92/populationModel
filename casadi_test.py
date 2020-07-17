@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 # matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
-number_desired_colors = 6 # https://matplotlib.org/tutorials/colors/colormaps.ht
+number_desired_colors = 6
 cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
 colors = [cmap(i) for i in range(number_desired_colors)]
 
@@ -82,7 +82,7 @@ def plot_region():
 	plt.title(f"Region with facilities and individuals\n(higher type -> success more likely)")
 
 	## Plot Region
-	labelRegion="Region"
+	# labelRegion="Region"
 	region = patches.Rectangle((0,0),sizeRegion,sizeRegion,linewidth=1,edgecolor=colors.pop(),facecolor="none")
 	ax.add_patch(region)
 
@@ -117,3 +117,7 @@ def plot_region():
 	return fig,ax
 
 fig,ax = plot_region()
+
+
+
+
