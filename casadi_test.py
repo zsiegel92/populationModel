@@ -5,11 +5,6 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 # matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
-number_desired_colors = 6
-cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
-colors = [cmap(i) for i in range(number_desired_colors)]
-
-
 
 
 sizeRegion = 1
@@ -77,6 +72,9 @@ fstar = sol.value(opti.f)
 
 
 def plot_region():
+	number_desired_colors = 6
+	cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
+	colors = [cmap(i) for i in range(number_desired_colors)]
 	fig, ax = plt.subplots(figsize=(5,5))
 	plt.axis('off')
 	plt.title(f"Region with facilities and individuals\n(higher type -> success more likely)")
