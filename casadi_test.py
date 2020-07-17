@@ -1,9 +1,9 @@
-from casadi import *
+from casadi import Opti,log,exp
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-matplotlib.use('TKAgg') #easier window management when not using IPython
+# matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
 number_desired_colors = 6 # https://matplotlib.org/tutorials/colors/colormaps.ht
 cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
@@ -15,17 +15,17 @@ colors = [cmap(i) for i in range(number_desired_colors)]
 sizeRegion = 1
 
 nIndiv = 25
-nFac = 3
+nFac = 5
 nSelectedFac = 2
 
 indiv = np.random.uniform(0,sizeRegion,(nIndiv, 2))
-theta = np.random.uniform(0,1,(nIndiv,1))
-
+# theta = np.random.uniform(0,1,(nIndiv,1))
+theta = np.array([np.random.choice([0,1]) for i in range(nIndiv)])
 fac = np.random.uniform(0,sizeRegion,(nFac, 2))
 
 dist = np.array([[ (indiv[i,0] - fac[j,0])**2 + (indiv[i,1] - fac[j,1])**2 for j in range(0,nFac)] for i in range(0,nIndiv)]) # nIndiv X nFac
 
-beta = [0,1,-1] #[beta0, beta_theta >0, beta_r <0]
+beta = [0,10,-1] #[beta0, beta_theta >0, beta_r <0]
 
 
 
@@ -38,15 +38,16 @@ r = [opti.variable() for i in range(nIndiv)]
 u = [opti.variable() for i in range(nIndiv)]
 
 discrete = []
-discrete.extend([True  for j in range(nFac) for i in range(nIndiv)]) #x variables
-discrete.extend([True  for j in range(nFac)]) #y variables
-discrete.extend([False for i in range(nIndiv)]) #r variables
-discrete.extend([False for i in range(nIndiv)]) #u variables
+discrete += [True  for j in range(nFac) for i in range(nIndiv)] #x variables
+discrete += [True  for j in range(nFac)] #y variables
+discrete += [False for i in range(nIndiv)] #r variables
+discrete += [False for i in range(nIndiv)] #u variables
 
 
 
 opti.minimize(-sum(u))#maximize sum u
-opti.subject_to([u[i] == -r[i] for i in range(nIndiv)])
+# opti.subject_to([u[i] == -r[i] for i in range(nIndiv)])
+opti.subject_to([u[i] == -log(1+exp(-beta[0] - beta[1]*theta[i] - beta[2]*r[i])) for i in range(nIndiv)])
 opti.subject_to([r[i] >= dist[i,j]*x[i][j] for i in range(nIndiv) for j in range(nFac)])
 opti.subject_to([ sum(x[i]) == 1 for i in range(nIndiv) ])
 opti.subject_to([ x[i][j] <= y[j] for i in range(nIndiv) for j in range(nFac)])
@@ -78,7 +79,7 @@ fstar = sol.value(opti.f)
 def plot_region():
 	fig, ax = plt.subplots(figsize=(5,5))
 	plt.axis('off')
-	plt.title(f"Region with facilities and individuals")
+	plt.title(f"Region with facilities and individuals\n(higher type -> success more likely)")
 
 	## Plot Region
 	labelRegion="Region"
@@ -86,14 +87,13 @@ def plot_region():
 	ax.add_patch(region)
 
 	# plt.plot([*r.getExteriorCoords()],color=colors.pop(),label=labelRegion)
-    ## Plot Individuals
+	## Plot Individuals
 	labelIndividuals = "Individual"
 	def plotIndividuals():
 		# plt.scatter(*pop.getIndividualCoordinates(),marker="*",c="blue",label="Individual")
-		weights = [1 for coords in indiv]
-		color_weight_map = {weight : colors.pop() for weight in set(weights)}
-		individual_colors = [color_weight_map[weight] for weight in weights]
-		individual_labels = [f"{labelIndividuals}" for coords in indiv]
+		color_weight_map = {ttheta : colors.pop() for ttheta in set(theta)}
+		individual_colors = [color_weight_map[ttheta] for ttheta in theta]
+		individual_labels = [f"{labelIndividuals} type {ttheta}" for coords,ttheta in zip(indiv,theta)]
 		for i,coords in enumerate(indiv):
 			plt.scatter(*coords,marker = "*",c=[individual_colors[i]],label=individual_labels[i])
 	plotIndividuals()
@@ -110,7 +110,9 @@ def plot_region():
 	plotFacilities()
 	## Create Legend
 	legend_dict = {artist.properties().get('label') : artist for artist in ax.collections.copy() + ax.lines.copy()}
-	plt.legend(legend_dict.values(),legend_dict.keys(),loc="upper right")
+	plt.legend(legend_dict.values(),legend_dict.keys(),loc='upper center', bbox_to_anchor=(0.5, 0), ncol=len(legend_dict),fontsize='xx-small') #,loc="upper right"
+
+	# plt.tight_layout()
 	plt.show(block=False)
 	return fig,ax
 
