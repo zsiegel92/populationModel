@@ -138,16 +138,13 @@ class Area(Polygon):
 class Region:
 
 	# All hubs in region have same population
-	def __init__(self,sizeRegion = 100,sizeHub = 5,populationHub = 4):
+	def __init__(self,sizeRegion = 100):
 		# self.geom = Area([(0, 0), (self.sizeRegion, 0), (self.sizeRegion, self.sizeRegion),(0,self.sizeRegion)])
 		self.sizeRegion = sizeRegion
 		self.geom = Area(box(0,0,self.sizeRegion,self.sizeRegion))
-		self.sizeHub = sizeHub
-		self.populationHub = populationHub
-		self.hubs=[]
 		self.individuals = []
 		self.facilityLocations = []
-		self.currentHub = None
+
 	def getAllParameters(self):
 		return list(set([individual.parameters for individual in self.individuals]))
 	def queryIndividualsByParameter(self,query):
@@ -167,10 +164,6 @@ class Region:
 		# except StopIteration:
 		#   self.generateHub()
 		#   return self.currentHub.nextLocation()
-	def generateHub(self):
-		locationHub = self.geom.uniformlyRandomInteriorPoint(margin = self.sizeHub)
-		self.currentHub = Hub(self.populationHub,self.sizeHub,center=locationHub)
-		self.hubs.append(self.currentHub)
 
 	def getExteriorCoords(self):
 		return np.array(self.geom.exterior.coords).T # for plt.plot

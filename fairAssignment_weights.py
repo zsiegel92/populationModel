@@ -18,11 +18,11 @@ theta_p_type1_value = 1
 theta_u_type2_value = 2
 theta_p_type2_value = 2
 
-density = 1/5000
+density = 1/2000
 sizeRegion = 1000
 # nPop = 10000
 nPop = int(sizeRegion * sizeRegion * density)
-indivPerFacility = 20
+indivPerFacility = 10
 nFacilities = int(nPop/indivPerFacility)
 
 
@@ -105,7 +105,7 @@ def plotHistogram():
 	# plt.close(fig)
 	return fig,ax
 
-fig,ax = plotHistogram()
+# fig,ax = plotHistogram()
 
 ### PLOT 2.5: Cumulative Distance Histograms
 def plotCumulativeHistogram():
@@ -123,7 +123,7 @@ def plotCumulativeHistogram():
 	# plt.close(fig)
 	return fig,ax
 
-fig,ax = plotCumulativeHistogram()
+# fig,ax = plotCumulativeHistogram()
 
 
 
@@ -154,7 +154,11 @@ def plotCDFs():
 	# plt.close(fig)
 	return fig,ax
 
-fig, ax = plotCDFs()
+# fig, ax = plotCDFs()
+
+
+
+### ASSIGNMENT
 
 
 
@@ -170,22 +174,3 @@ fig, ax = plotCDFs()
 
 
 
-
-
-
-
-
-
-
-# while True:
-# 	iii = input("What would you like to do? 1. delete hubs 2. add hubs 3. delete ind1 4. add ind1\n")
-# 	if iii == '1':
-# 		removeByLabel(labelHub)
-# 	elif iii == '2':
-# 		addByLabel(labelHub)
-# 	elif iii == '3':
-# 		removeByLabel(labelIndividuals)
-# 	elif iii == '4':
-# 		addByLabel(labelIndividuals)
-# 	else:
-# 		print("Please make a valid choice.")

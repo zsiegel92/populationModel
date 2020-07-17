@@ -1,0 +1,11 @@
+
+Bonmin (Coin-OR)
+-JuMP (Julia) interface (-> pyjulia interface)
+-
+
+CasADI
+-Python interface
+-
+
+pajarito
+-mixed-integer convex programming (MICP) solver in Julia. Similar to Bonmin. Uses "sequential polyhedral outer-approximations of the convex feasible set, similar to Bonimin". Can be accessed through JuMP, Convex.jl, or MathProgBase.
