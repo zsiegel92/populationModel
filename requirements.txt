@@ -3,3 +3,4 @@ numpy==1.18.4
 Shapely==1.7.0
 scipy==1.4.1
 casadi==3.5.1
+bitarray==bitarray==1.4.2
