@@ -11,7 +11,7 @@ matplotlib.use('TKAgg') #easier window management when not using IPython
 nIndiv = 50
 nFac = 16
 nSelectedFac = 8
-nTrials = 50
+nTrials = 200
 
 sizeRegion = 1
 
@@ -77,7 +77,7 @@ def solve_multiple_enumerative():
 			all_uvals[f].extend(uvals[f])
 			all_fstar[f].append(fstar[f])
 			all_prob_success_vals[f].extend(prob_success_vals[f])
-		print(f"Solved {trial}/{nTrials} enumeratively")
+		print(f"Solved {trial+1}/{nTrials} enumeratively")
 
 	for f in objective_functions:
 		all_yvals[f] = tuple(all_yvals[f]) # so they are hashable later for grouping plots
@@ -139,19 +139,21 @@ def plotMultiplCDFs(want_to_plot,quantityLabel):
 
 
 
-# fig,ax = plot_region("(CasADI method)")
-# xvals2,yvals2,rvals2,uvals2,fstar2 = solve_casadi()
-# xvals,yvals,rvals,uvals,fstar = xvals2,yvals2,rvals2,uvals2,prob_success2,fstar2
+
+
+def generate_file_label():
+	weights_label = "_".join(map(str,weights))
+	beta_label = "_".join(map(str,beta))
+	timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M")
+	trial_label = f"at_{timestamp}_weights_{weights_label}_beta_{beta_label}_nIndiv_{nIndiv}_nFac_{nSelectedFac}of{nFac}_nTrials_{nTrials}"
+	return trial_label
+
+trial_label = generate_file_label()
+
 
 yvals,rvals,uvals,fstar,prob_success_vals = solve_multiple_enumerative()
 
-for fn, (k,v) in zip(objective_functions,yvals.items()):
-	print(f"{fn.__name__:30} : {v}")
 
-weights_label = "_".join(map(str,weights))
-beta_label = "_".join(map(str,beta))
-timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M")
-trial_label = f"at_{timestamp}_weights_{weights_label}_beta_{beta_label}_nIndiv_{nIndiv}_nFac_{nSelectedFac}of{nFac}_nTrials_{nTrials}"
 print(trial_label)
 fig,ax = plotMultiplCDFs(rvals,"Distances from Nearest Facility")
 plt.savefig(f"figures/distance_cdfs_{trial_label}.pdf", bbox_inches='tight')
