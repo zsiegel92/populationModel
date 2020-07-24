@@ -10,9 +10,9 @@ matplotlib.use('TKAgg') #easier window management when not using IPython
 
 sizeRegion = 1
 
-nIndiv = 100
-nFac = 8
-nSelectedFac = 4
+nIndiv = 20
+nFac = 5
+nSelectedFac = 2
 
 indiv = np.random.uniform(0,sizeRegion,(nIndiv, 2))
 # theta = np.random.uniform(0,1,(nIndiv,1))
@@ -42,7 +42,7 @@ def solve_casadi():
 	opti.minimize(-sum(u))#maximize sum u
 	opti.subject_to([u[i] == -log(1+exp(-beta[0] - beta[1]*theta[i] - beta[2]*r[i])) for i in range(nIndiv)]) #log prob(success)
 	# opti.subject_to([u[i] == 1/(1+exp(-beta[0] - beta[1]*theta[i] - beta[2]*r[i])) for i in range(nIndiv)]) #prob(success)
-	opti.subject_to([r[i] >= dist[i,j]*x[i][j] for i in range(nIndiv) for j in range(nFac)])
+	opti.subject_to([r[i] >= sum([dist[i,j]*x[i][j] for j in range(nFac)]) for i in range(nIndiv) ])
 	opti.subject_to([ sum(x[i]) == 1 for i in range(nIndiv) ])
 	opti.subject_to([ x[i][j] <= y[j] for i in range(nIndiv) for j in range(nFac)])
 	opti.subject_to(sum(y) <= nSelectedFac)
@@ -64,8 +64,8 @@ def solve_casadi():
 	# 		print(e)
 	# 		print(f"NOTE: '{key}' is not a valid s_option!")
 
-	xvals = np.array([[int(sol.value(x[i][j])) for j in range(nFac)] for i in range(nIndiv)])
-	yvals = np.array([int(sol.value(y[j])) for j in range(nFac)])
+	xvals = np.round(np.array([[sol.value(x[i][j]) for j in range(nFac)] for i in range(nIndiv)])).astype(int)
+	yvals = np.array([sol.value(y[j]) for j in range(nFac)]).astype(int)
 	rvals = np.array([sol.value(r[i]) for i in range(nIndiv)])
 	uvals = np.array([sol.value(u[i]) for i in range(nIndiv)])
 	# prob_success = np.array([1/(1+exp(-beta[0] - beta[1]*theta[i] - beta[2]*rvals[i])) for i in range(nIndiv)])
