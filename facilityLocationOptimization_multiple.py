@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+from matplotlib.ticker import FuncFormatter
 from datetime import datetime
 import pickle
 from subset_helper import bax
@@ -13,7 +14,7 @@ matplotlib.use('TKAgg') #easier window management when not using IPython
 nIndiv = 50
 nFac = 8
 nSelectedFac = 4
-nTrials = 500
+nTrials = 40
 
 sizeRegion = 1
 
@@ -38,7 +39,7 @@ objective_function_names = {fn.__name__ : fn for fn in objective_functions}
 fairness_ratings = [10**10 + weight for weight in weights]+ [10**5 + weight for weight in weights] + weights #arbitrary, but roughly increasing with fairness-inducing tendency
 fairness_strengths = dict(zip(objective_functions,fairness_ratings)) # to create a consistent order in plot legends
 
-def solve_multiple_enumerative():
+def solve_multiple_enumerative(saving=False):
 	bbax=bax()
 
 
@@ -92,6 +93,9 @@ def solve_multiple_enumerative():
 	for f in objective_functions:
 		all_yvals[f] = tuple(all_yvals[f]) # so they are hashable later for grouping plots
 	dat = {"yvals": all_yvals,"rvals": all_rvals,"uvals": all_uvals,"fstar": all_fstar,"prob_success_vals": all_prob_success_vals}
+
+	if saving:
+		save_data(dat)
 	return dat
 	# return all_yvals,all_rvals,all_uvals,all_fstar,all_prob_success_vals
 
@@ -156,7 +160,7 @@ def post_process(data, want_to_plot_key,quantityLabel):
 		# indices = [{'name':'Mean Distance','key': 'mean_dist', 'shared':False,'fn':dummy},{'name':'Mean Success Prob','key': 'mean_prob','shared':False,'fn':dummy},{'name':'McCloone','key': 'mcCloone','shared':True,'fn':dummy}]
 
 	# lumped_vals_separated.sort(key = lambda pair: pair[1]['legend_score'])
-	lumped_vals_separated.sort(key = lambda pair: pair[1]['cov'])
+	lumped_vals_separated.sort(key = lambda pair: pair[1]['cov'],reverse=True)
 	# lumped_vals_separated = {('prob_weight5 $\\theta_0$,\ndistance_weight5 $\\theta_0$',line_content),...}
 	# line_content =
 	return lumped_vals_separated
@@ -177,30 +181,30 @@ def empiricalCDF(container):
 
 
 
-def plotMultiplCDFs(data,want_to_plot_key,quantityLabel):
+def plotMultiplCDFs(data,want_to_plot_key,quantityLabel,logPlotX=False,logPlotY=False,saving=False):
 	lumped_vals_separated = post_process(data,want_to_plot_key,quantityLabel)
 
 	# fig, (ax1,ax2) = plt.subplots(figsize=(10,10),gridspec_kw={"nrows":2,"ncols":1,"height_ratios":[2,1]})
-
 	gs = gridspec.GridSpec(nrows=2,ncols=1,height_ratios=[3,1])
 	fig = plt.figure(figsize=(15,10))
 	ax1 = plt.subplot(gs[0])
 	ax2 = plt.subplot(gs[1])
 	fig.subplots_adjust(hspace=0.5)
-
+	decimal_formatter = FuncFormatter(lambda y, _: '{:.16g}'.format(y))
+	if logPlotX:
+		ax1.set_xscale('log') #,basex=2
+		ax1.xaxis.set_major_formatter(decimal_formatter)
+	if logPlotY:
+		ax1.set_yscale('log')
+		ax1.yaxis.set_major_formatter(decimal_formatter)
 
 	ax1.set_title(f"{quantityLabel}, Empirical CDF\n(nIndividuals={nIndiv},nFacilities={nSelectedFac}/{nFac},nTrials={nTrials})")
-	ax1.set_xlabel(quantityLabel)
-	ax1.set_ylabel(f"Fraction of Individuals")
+	log_note = (""," (log scale)") # can be indexed by True/False as 0/1
+	ax1.set_xlabel(quantityLabel + log_note[logPlotX])
+	ax1.set_ylabel(f"Fraction of Individuals" + log_note[logPlotY])
 	cdfLines = [ax1.plot(*empiricalCDF(line_content['data']),c=line_content['color'],label=plotLabel,ls=line_content['linestyle'],linewidth=1,alpha=0.5) for (plotLabel, line_content) in lumped_vals_separated]
 
 	ax1.legend(loc="best")
-
-
-
-
-	# rows = [f'row{i}' for i in range(nRows)]
-
 	nRows = len(lumped_vals_separated)
 	nCols = len(indices)
 	cols = [index['name'] for index in indices]
@@ -248,8 +252,15 @@ def plotMultiplCDFs(data,want_to_plot_key,quantityLabel):
 
 	plt.show(block=False)
 	# plt.close(fig)
-	# return fig,(ax1,ax2)
-	return table
+	log_identifier = ''
+	if logPlotX:
+		log_identifier += 'logX_'
+	if logPlotY:
+		log_identifier += 'logY_'
+	if saving:
+		plt.savefig(f"figures/{want_to_plot_key}_cdfs_{log_identifier}{generate_file_label()}.pdf", bbox_inches='tight')
+	return fig,(ax1,ax2)
+	# return table
 def generate_file_label():
 	weights_label = "_".join(map(str,weights))
 	beta_label = "_".join(map(str,beta))
@@ -260,7 +271,6 @@ def generate_file_label():
 def save_data(dat):
 	# dat = {"yvals" : yvals,"rvals" : rvals,"uvals" : uvals,"fstar" : fstar,"prob_success_vals" : prob_success_vals}
 	named_dat = {name: {fn.__name__ : val for fn,val in fndict.items()} for name,fndict in dat.items()}
-
 	data_filename = f"data/data_{generate_file_label()}.pickle"
 	pickle.dump(named_dat,open( data_filename, "wb" ))
 
@@ -273,24 +283,21 @@ def load_data(data_filename):
 
 trial_label = generate_file_label()
 
-dat = solve_multiple_enumerative()
-lumped_vals_separated = post_process(dat,'rvals','distances from nearest facility')
-# dat = load_data('data/data_at_23_07_2020_09_53_weights_1_5_1000_beta_0_0.2_-1_nIndiv_50_nFac_4of8_nTrials_20.pickle')
+saving = False
+dat = solve_multiple_enumerative(saving=saving)
+
+# dat = load_data('data/data_at_23_07_2020_21_07_weights_1_5_1000_beta_0_0.2_-1_nIndiv_50_nFac_4of8_nTrials_40.pickle')
 
 
+plotMultiplCDFs(dat,'rvals',"Distances from Nearest Facility",logPlotX=False,saving=saving)
 
-# pickle.load(file, *, fix_imports=True, encoding="ASCII", errors="strict", buffers=None)
-
-# save_data(dat)
-table = plotMultiplCDFs(dat,'rvals',"Distances from Nearest Facility")
+# plotMultiplCDFs(dat,'rvals',"Distances from Nearest Facility (log scale x)",logPlotX=True)
 
 
+plotMultiplCDFs(dat,'rvals',"Distances from Nearest Facility",logPlotX=True,logPlotY=True,saving=saving)
 
-plt.savefig(f"figures/distance_cdfs_{trial_label}.pdf", bbox_inches='tight')
-# plotMultiplCDFs(dat,'prob_success_vals',"Probability of Success")
-# plt.savefig(f"figures/prob_cdfs_{trial_label}.pdf", bbox_inches='tight')
+# plotMultiplCDFs(dat,'prob_success_vals',"Probability of Success",logPlotX=False)
+# plotMultiplCDFs(dat,'prob_success_vals',"Probability of Success (log scale x)",logPlotX=True)
+plotMultiplCDFs(dat,'prob_success_vals',"Probability of Success",logPlotY=True,saving=saving)
 
-
-
-# fig,ax = plot_region("(enumerative method)")
-# fig,ax = plot_multiple_objectives("(multiple objectives)")
+# plotMultiplCDFs(dat,'prob_success_vals',"Probability of Success (log log)",logPlotX=True,logPlotY=True)
