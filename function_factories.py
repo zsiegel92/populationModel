@@ -63,3 +63,22 @@ def type_covariance_function(line_content):
 	theta_mean = (1/nIndiv)* sum([theta_val * len(values) for theta_val,values in raw_probabilities.items()]) #should be 0.5
 	cov = (1/nIndiv) * sum([(theta_val - theta_mean) * prob for theta_val in raw_probabilities for prob in raw_probabilities[theta_val]])
 	return cov
+
+
+def price_of_fairness_distance_function(line_content):
+	raw_distances = line_content["raw_distances_grouped"]
+	all_distances = []
+	for theta_val,distances in raw_distances.items():
+		all_distances += distances
+	SWB_dist = line_content['SWB_dist']
+	SWB_fair_dist = -sum(all_distances)
+	return (SWB_dist - SWB_fair_dist)/	abs(SWB_dist)
+
+
+def price_of_fairness_probability_function(line_content):
+	raw_probabilities = line_content["raw_probabilities_grouped"]
+	all_probabilities = []
+	for theta_val,probabilities in raw_probabilities.items():
+		all_probabilities += probabilities
+	SWB_prob = line_content['SWB_prob']
+	return (SWB_prob - sum(all_probabilities))/	abs(SWB_prob)

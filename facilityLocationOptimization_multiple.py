@@ -6,15 +6,15 @@ from matplotlib.ticker import FuncFormatter
 from datetime import datetime
 import pickle
 from subset_helper import bax
-from function_factories import sum_log_prob_weighted_factory, sum_prob_weighted_factory,sum_distance_weighted_factory,prob_success,mean_distance_function,mean_probability_function,type_covariance_function
+from function_factories import sum_log_prob_weighted_factory, sum_prob_weighted_factory,sum_distance_weighted_factory,prob_success,mean_distance_function,mean_probability_function,type_covariance_function, price_of_fairness_distance_function, price_of_fairness_probability_function
 matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
 
 
-nIndiv = 50
+nIndiv = 100
 nFac = 8
 nSelectedFac = 4
-nTrials = 40
+nTrials = 500
 
 sizeRegion = 1
 
@@ -24,14 +24,24 @@ theta_high = 1
 theta = [theta_low for i in range(nIndiv//2)] + [theta_high for i in range(nIndiv - (nIndiv//2))]
 np.random.shuffle(theta)
 
-beta = [0,0.2,-1] #[beta0, beta_theta >0, beta_r <0]
+beta = [0,0.5,-10] #[beta0, beta_theta >0, beta_r <0]
 
 weights = [1,5,1000] #should all be >= 1
-objective_functions = [sum_log_prob_weighted_factory(w,beta,theta) for w in weights] + [sum_prob_weighted_factory(w,beta,theta) for w in weights] + [sum_distance_weighted_factory(w,theta) for w in weights]
+log_prob_obj_fns = [sum_log_prob_weighted_factory(w,beta,theta) for w in weights]
+prob_obj_fns = [sum_prob_weighted_factory(w,beta,theta) for w in weights]
+dist_obj_fns= [sum_distance_weighted_factory(w,theta) for w in weights]
+objective_functions = log_prob_obj_fns + prob_obj_fns + dist_obj_fns
+SWB_dist_obj = dist_obj_fns[0]
+# SWB_prob_obj = sum_prob_weighted_factory(1,beta,theta)
+# SWB_index = objective_functions.index(SWB_prob_obj)
 
-def dummy():
-	pass
-indices = [{'name':'Mean Distance','key': 'mean_dist', 'shared':False,'fn':mean_distance_function},{'name':'Mean Success Prob','key': 'mean_prob','shared':False,'fn':mean_probability_function},{'name':'Covariance(type,success)','key': 'cov','shared':True,'fn':type_covariance_function}]
+
+indices = [
+	{'name':'Mean Distance','key': 'mean_dist', 'shared':False,'fn':mean_distance_function},
+	{'name':'Mean Success Prob','key': 'mean_prob','shared':False,'fn':mean_probability_function},
+	{'name':'Covariance(type,success)','key': 'cov','shared':True,'fn':type_covariance_function},{'name':'Price of Fairness: Distance','key': 'pof_dist','shared':True,'fn':price_of_fairness_distance_function},
+	{'name':'Price of Fairness: Probability','key': 'pof_prob','shared':True,'fn':price_of_fairness_probability_function}
+	]
 
 
 objective_function_names = {fn.__name__ : fn for fn in objective_functions}
@@ -92,6 +102,7 @@ def solve_multiple_enumerative(saving=False):
 
 	for f in objective_functions:
 		all_yvals[f] = tuple(all_yvals[f]) # so they are hashable later for grouping plots
+
 	dat = {"yvals": all_yvals,"rvals": all_rvals,"uvals": all_uvals,"fstar": all_fstar,"prob_success_vals": all_prob_success_vals}
 
 	if saving:
@@ -105,6 +116,14 @@ def solve_multiple_enumerative(saving=False):
 def post_process(data, want_to_plot_key,quantityLabel):
 	yvals = data['yvals']
 	yvals_choices = set((v for k,v in yvals.items()))
+
+	# SWB_dist_obj = sum_distance_weighted_factory(1,beta,theta)
+	# SWB_prob_obj = sum_prob_weighted_factory(1,beta,theta)
+	base_vals_dist = {k : values_dict[SWB_dist_obj] for k,values_dict in data.items()}
+	# base_vals_prob = {k : values_dict[SWB_prob_obj] for k,values_dict in data.items()}
+	SWB_dist = -1*sum(base_vals_dist['rvals'])
+	SWB_prob = sum(base_vals_dist['prob_success_vals']) # SWB_prob
+
 	lumped_functions =  {choice : [fn for fn in objective_functions if yvals[fn]==choice] for choice in yvals_choices}
 	lumped_labels =  {choice : ",\n".join([f"{fn.__name__} $typeLabel" for fn in objective_functions if yvals[fn]==choice]) for choice in yvals_choices}
 	legend_scores = {choice : sum([fairness_strengths[fn] for fn in fns]) for choice,fns in lumped_functions.items()}
@@ -115,7 +134,7 @@ def post_process(data, want_to_plot_key,quantityLabel):
 	## for fairness
 	lumped_raw_distances = {yvals[fn] : vals for fn,vals in data['rvals'].items()}
 	lumped_probabilities = {yvals[fn] : vals for fn,vals in data['prob_success_vals'].items()}
-	linestyles = dict(zip(set(theta),["-","-.",":","--"]))
+	linestyles = dict(zip(set(theta),["-",":","-.","--"]))
 	nLines = len(lumped_functions)
 	colors = get_n_colors(nLines)
 	lumped_vals_separated = []
@@ -139,6 +158,8 @@ def post_process(data, want_to_plot_key,quantityLabel):
 			line_content['raw_distances_grouped'] = raw_distances_grouped #shared reference for all theta_val
 			line_content['raw_probabilities_grouped'] = raw_probabilities_grouped #shared reference for all theta_val
 			line_content['theta'] = theta_val
+			line_content['SWB_dist'] = SWB_dist
+			line_content['SWB_prob'] = SWB_prob
 			lumped_vals_separated.append((newlabel,line_content))
 
 
@@ -204,14 +225,19 @@ def plotMultiplCDFs(data,want_to_plot_key,quantityLabel,logPlotX=False,logPlotY=
 	ax1.set_ylabel(f"Fraction of Individuals" + log_note[logPlotY])
 	cdfLines = [ax1.plot(*empiricalCDF(line_content['data']),c=line_content['color'],label=plotLabel,ls=line_content['linestyle'],linewidth=1,alpha=0.5) for (plotLabel, line_content) in lumped_vals_separated]
 
-	ax1.legend(loc="best")
+	leg = ax1.legend(loc="best",prop={"size":8})
+	# set the linewidth of each legend object
+	for legobj in leg.legendHandles:
+	    legobj.set_linewidth(3.0)
+
+
+
 	nRows = len(lumped_vals_separated)
 	nCols = len(indices)
 	cols = [index['name'] for index in indices]
 	colors = [line_content['color'] for (plotLabel, line_content) in lumped_vals_separated]
 	rows = [plotLabel for (plotLabel, line_content) in lumped_vals_separated]
-	content = [[f"content{(i,j)}" for j in range(nCols)] for i in range(nRows)]
-	content = [[line_content[index_dict['key']] for index_dict in indices] for line_name,line_content in lumped_vals_separated]
+	content = [["{:.8f}".format(line_content[index_dict['key']]) for index_dict in indices] for line_name,line_content in lumped_vals_separated]
 
 	# content.reverse()
 	# colors = get_n_colors(nRows)
@@ -224,7 +250,8 @@ def plotMultiplCDFs(data,want_to_plot_key,quantityLabel,logPlotX=False,logPlotY=
 					  rowColours=colors,
 					  rowLabels=rows,
 					  colLabels=cols,
-					  loc='center')
+					  loc='center',
+					  cellLoc='left')
 	table_d = table.get_celld()
 
 	table.set_fontsize(8)
@@ -248,8 +275,6 @@ def plotMultiplCDFs(data,want_to_plot_key,quantityLabel,logPlotX=False,logPlotY=
 		for j in range(-1,nCols):
 			table_d[(i,j)].set_height(hh)
 
-
-
 	plt.show(block=False)
 	# plt.close(fig)
 	log_identifier = ''
@@ -261,6 +286,8 @@ def plotMultiplCDFs(data,want_to_plot_key,quantityLabel,logPlotX=False,logPlotY=
 		plt.savefig(f"figures/{want_to_plot_key}_cdfs_{log_identifier}{generate_file_label()}.pdf", bbox_inches='tight')
 	return fig,(ax1,ax2)
 	# return table
+
+
 def generate_file_label():
 	weights_label = "_".join(map(str,weights))
 	beta_label = "_".join(map(str,beta))
@@ -283,7 +310,7 @@ def load_data(data_filename):
 
 trial_label = generate_file_label()
 
-saving = False
+saving = True
 dat = solve_multiple_enumerative(saving=saving)
 
 # dat = load_data('data/data_at_23_07_2020_21_07_weights_1_5_1000_beta_0_0.2_-1_nIndiv_50_nFac_4of8_nTrials_40.pickle')

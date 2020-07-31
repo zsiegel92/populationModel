@@ -1,5 +1,6 @@
 from casadi import Opti,log,exp
 import numpy as np
+from datetime import datetime
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
@@ -10,9 +11,9 @@ matplotlib.use('TKAgg') #easier window management when not using IPython
 
 sizeRegion = 1
 
-nIndiv = 20
-nFac = 5
-nSelectedFac = 2
+nIndiv = 100
+nFac = 10
+nSelectedFac = 5
 
 indiv = np.random.uniform(0,sizeRegion,(nIndiv, 2))
 # theta = np.random.uniform(0,1,(nIndiv,1))
@@ -155,6 +156,13 @@ def plot_region(title_extra=""):
 	return fig,ax
 
 
+def generate_file_label():
+	# weights_label = "_".join(map(str,weights))
+	beta_label = "_".join(map(str,beta))
+	timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M")
+	trial_label = f"at_{timestamp}_beta_{beta_label}_nIndiv_{nIndiv}_nFac_{nSelectedFac}of{nFac}"
+	return trial_label
+
 
 # xvals2,yvals2,rvals2,uvals2,fstar2 = solve_casadi()
 # xvals,yvals,rvals,uvals,fstar = xvals2,yvals2,rvals2,uvals2,fstar2
@@ -162,7 +170,7 @@ xvals, yvals,rvals,uvals,prob_success,fstar = solve_casadi()
 # yvals,rvals,uvals,prob_success,fstar = solve_enumerative()
 fig,ax = plot_region("(CasADI method)")
 
-
+plt.savefig(f"figures/regionPlot_{generate_file_label()}.pdf", bbox_inches='tight')
 # fig,ax = plot_region("(enumerative method)")
 
 
