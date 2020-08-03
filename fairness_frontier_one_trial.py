@@ -6,8 +6,8 @@ from matplotlib.ticker import FuncFormatter
 from datetime import datetime
 import pickle
 from subset_helper import bax
-from function_factories_frontier import sum_log_prob_weighted_factory, sum_prob_weighted_factory,sum_distance_weighted_factory,mean_distance_function,mean_probability_function,type_covariance_function, price_of_fairness_distance_function, price_of_fairness_probability_function
-matplotlib.use('TKAgg') #easier window management when not using IPython
+from function_factories_frontier import sum_log_prob_weighted_factory, sum_prob_weighted_factory,sum_distance_weighted_factory,mean_distance_function,mean_probability_function,type_covariance_function, price_of_fairness_distance_function, price_of_fairness_probability_function,markers,covariance_factory, linear_combination_of_objectives
+# matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
 import sys
 
@@ -30,9 +30,16 @@ class Person(Facility):
 # Person(theta[i],maxCoord = sizeRegion)
 
 
-nIndiv = 40
-nFac = 40
+nIndiv = 50
+nFac = 20
 nSelectedFac = 4
+
+##TESTING
+# nIndiv = 40
+# nFac = 20
+# nSelectedFac = 4
+
+
 
 sizeRegion = 1
 
@@ -41,19 +48,23 @@ theta_low = 0
 theta_high = 1
 theta = [theta_low for i in range(nIndiv//2)] + [theta_high for i in range(nIndiv - (nIndiv//2))]
 nIndiv = len(theta)
-np.random.shuffle(theta)
+# np.random.shuffle(theta)
 theta_low_indices = [i for i in range(nIndiv) if theta[i]==theta_low]
 
-beta = [0,0.5,-10] #[beta0, beta_theta >0, beta_r <0]
+beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
 
-weights = [1,5,1000] #should all be >= 1
+weights = [1,10] #should all be >= 1
 log_prob_obj_fns = [sum_log_prob_weighted_factory(w) for w in weights]
 prob_obj_fns = [sum_prob_weighted_factory(w) for w in weights]
 dist_obj_fns= [sum_distance_weighted_factory(w) for w in weights]
-objective_functions = log_prob_obj_fns + prob_obj_fns + dist_obj_fns
 SWB_dist = dist_obj_fns[0]
 SWB_prob = prob_obj_fns[0]
-SWB_functions = [SWB_dist, SWB_prob]
+SWB_logprob = log_prob_obj_fns[0]
+SWB_functions = [SWB_dist, SWB_prob,SWB_logprob]
+cov_fn = covariance_factory()
+prob_plus_lambda_cov = [linear_combination_of_objectives(SWB_prob,cov_fn,w) for w in weights]
+
+objective_functions = log_prob_obj_fns + prob_obj_fns + dist_obj_fns + prob_plus_lambda_cov
 
 indices = [
 	{'name':'Mean Distance','key': 'mean_dist', 'shared':False,'fn':mean_distance_function},
@@ -102,13 +113,13 @@ class Instance:
 		if other_instance is not None:
 			# print(f"len(self.rvals: {len(self.rvals)}, len(other_instance.rvals): {len(other_instance.rvals)}")
 			return Instance(
-			                rvals = self.rvals + other_instance.rvals,
-			                yvals = self.yvals + other_instance.yvals,
-			                uvals = add_dict_lists(self.uvals,other_instance.uvals),
-			                fstars = {fn: sum(self.uvals[fn]) for fn in objective_functions},
-			                uvals_type0 = add_dict_lists(self.uvals_type0,other_instance.uvals_type0),
-			                fstars_type0 = {fn: sum(self.uvals_type0[fn]) for fn in objective_functions}
-			                )
+							rvals = self.rvals + other_instance.rvals,
+							yvals = self.yvals + other_instance.yvals,
+							uvals = add_dict_lists(self.uvals,other_instance.uvals),
+							fstars = {fn: sum(self.uvals[fn]) for fn in objective_functions},
+							uvals_type0 = add_dict_lists(self.uvals_type0,other_instance.uvals_type0),
+							fstars_type0 = {fn: sum(self.uvals_type0[fn]) for fn in objective_functions}
+							)
 		else:
 			return self
 	def size(self):
@@ -163,11 +174,12 @@ def solve_multiple_frontier(saving=False):
 	best = {fn: None for fn in objective_functions}
 	indiv = [Person(theta[i],maxCoord = sizeRegion) for i in range(nIndiv)]
 	fac = [Facility(maxCoord = sizeRegion) for i in range(nFac)]
-	dist = np.array([[person.dist(facility) for facility in fac] for person in indiv])
+	# dist = np.array([[person.dist(facility) for facility in fac] for person in indiv])
+	dist = pickle.load(open('last_dist.pickle','rb'))
 	total_subsets = bbax.enumerator.choose(nFac,nSelectedFac)
 	for ind, gp in enumerate(bbax.bax_gen(nFac,nSelectedFac)):
-		num_in_each_frontier = [len(frontier.instances) for fn, frontier in frontiers.items()]
 		if ind % 1000 == 0:
+			num_in_each_frontier = [len(frontier.instances) for fn, frontier in frontiers.items()]
 			print(f"Processed {ind} subsets out of {total_subsets}")
 			print(num_in_each_frontier)
 		gp = gp.toList()
@@ -180,27 +192,140 @@ def solve_multiple_frontier(saving=False):
 			frontier.consider(instance)
 		best = {fn : instance if instance.beats(best_instance,fn) else best_instance for fn,best_instance in best.items()}
 	# if saving:
-	# 	save_data(dat)
-	return best,frontiers
+	#   save_data(dat)
+	return best,frontiers,dist
+
+def generate_file_label():
+	weights_label = "_".join(map(str,weights))
+	beta_label = "_".join(map(str,beta))
+	timestamp = datetime.now().strftime("%d_%m_%Y_%H_%M")
+	trial_label = f"at_{timestamp}_weights_{weights_label}_beta_{beta_label}_nIndiv_{nIndiv}_nFac_{nSelectedFac}of{nFac}"
+	return trial_label
+def get_n_colors(number_desired_colors):
+	if number_desired_colors < 10:
+		default = ["#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b", "#e377c2", "#7f7f7f", "#bcbd22", "#17becf"]
+		colors = default[0:number_desired_colors]
+	else:
+		# https://matplotlib.org/tutorials/colors/colormaps.ht
+		cmap = plt.cm.get_cmap('nipy_spectral',number_desired_colors)
+		colors = [cmap(i) for i in range(number_desired_colors)]
+	return colors
 
 
-def plot_frontier(frontier):
-	fig, ax = plt.subplots(figsize=(10,10))# plt.axis('off')
-	title = f"Efficient Frontier for Maximizing Distance"
+
+def plot_tradeoff(best,frontiers,saving=False):
+	# fig, ax = plt.subplots(figsize=(10,10))
+	fig = plt.figure(figsize=(10,10))
+	axes = {}
+	colors = get_n_colors(len(best))
+	color_map = {fn : colors.pop() for fn in best}
+	# marker_map = {fn : f"${fn.marker}^{{{fn.weight}}}$" for fn in best}
+	marker_map = {fn : fn.weighted_marker for fn in best}
+	fake_marker_map = {fn : f"${fn.marker}^{{{fn.coeff}}}$" for fn in best}
+	line_artists = []
+	# point_legend_helper = {fn : (color_map[fn],fn.marker,fn.basename) for fn in best}
+	scat = {fn : [] for fn in best}
+
+	scat_xdata = [instance.fstars_type0[fn] for i,(fn,frontier) in enumerate(frontiers.items()) for (other_fn,instance) in best.items()]
+	scat_ydata = [instance.fstars[fn] for i,(fn,frontier) in enumerate(frontiers.items()) for (other_fn,instance) in best.items()]
+	marker_size = 0.05
+	def get_nonoverlapping_positions(x_data, y_data):
+		new_x = x_data.copy()
+		new_y = y_data.copy()
+		numel = len(new_x)
+		for index, (x, y) in enumerate(zip(new_x,y_data)):
+			to_change = []
+			for index2 in range(index+1,numel):
+				other_x = new_x[index2]
+				other_y = y_data[index2]
+				if abs(x-other_x) < marker_size and abs(y-other_y) < marker_size:
+					to_change.append(index2)
+			for index2 in to_change:
+				# print(f"Adjusting new_x[{index2}] = {new_x[index2]},y_data[{index2}] = {y_data[index2]}")
+				new_x[index2] += marker_size*0.2
+				new_y[index2] += marker_size*0.05
+		return new_x,new_y
+	scat_xdata_adjusted,scat_ydata_adjusted = get_nonoverlapping_positions(scat_xdata,scat_ydata)
+	ctr = 0
+	for i, (fn, frontier) in enumerate(frontiers.items()):
+		ax = fig.add_subplot(111,label=fn.__name__,frame_on=False)
+		axes[fn] = ax
+		x_raw = frontier.fstarvals_type0()
+		y_raw = frontier.fstarvals()
+		print(f"Plotting data for {fn.__name__}")
+		color = color_map[fn]
+		linename = f"{fn.__name__} Efficient Frontier"
+		ax.plot(x_raw,y_raw,label=linename,color=color,marker="4",alpha=0.7)
+		line_artists.extend(ax.collections.copy() + ax.lines.copy())
+		print(f"Scattering for {fn.__name__}")
+		for other_fn, instance in best.items():
+			print(f"{other_fn.__name__}, ({instance.fstars_type0[fn]},{instance.fstars[fn]}), marker: {marker_map[other_fn]}")
+			x_inst = instance.fstars_type0[fn]# + np.random.rand()/200 #jittering
+			# x_inst_adjusted = x_inst
+			y_inst = instance.fstars[fn]# + np.random.rand()/200 #jittering
+			# y_inst_adjusted = scat_ydata_adjusted[ctr]
+			# x_inst = scat_xdata_adjusted[ctr]
+			# y_inst = scat_ydata_adjusted[ctr]
+			ctr += 1
+			# label = other_fn.__name__
+			label = f"{other_fn.__name__}"
+			scatcolor = color_map[fn]
+			scatplot = ax.scatter([x_inst],[y_inst],label=label,s=20**2,color=scatcolor,marker=marker_map[other_fn],alpha=0.8)
+			# arrow_size = marker_size/100
+			# arrow = ax.arrow(x_inst, y_inst_adjusted,0,y_inst-y_inst_adjusted, color='red',alpha=0.3, width=arrow_size*0.1, head_width=arrow_size, head_length=marker_size*0.5, zorder=0,length_includes_head=True)
+
+			fakelabel = f"{other_fn.basename}"
+			fakescatplot = matplotlib.lines.Line2D([], [],label=fakelabel,markersize=20,color=color_map[fn],marker=fake_marker_map[other_fn],alpha=0.8,linestyle='None')
+			# scat[fn].append(scatplot)
+			scat[fn].append(fakescatplot)
+
+		ax.set_xticks([])
+		ax.set_yticks([])
+		ax.tick_params(axis='x', labelcolor=color)
+		ax.tick_params(axis='y', labelcolor=color)
+	# artists = [artist for ax in axes for artist in ax.collections.copy() + ax.lines.copy()]
+	legend_dict = {artist.properties().get('label') : artist for artist in line_artists}
+	scat_dict = {}
+	for fn,art_list in scat.items():
+		for artist in art_list:
+			artist_lab = artist.properties().get('label')
+			scat_dict[f"Value of {fn.__name__} at Optimal {artist_lab} "] = artist
+	legend_dict = {**legend_dict,**scat_dict}
+	plt.legend(legend_dict.values(),legend_dict.keys(),loc='best') #,loc="upper right"bbox_to_anchor=(0.5, 0), ncol=len(legend_dict),fontsize='small'
+	# plt.setp(fig.get_axes(), xticks=[], yticks=[])
+	ax.set_xlabel(f"Utility to type-$0$ Individuals")
+	ax.set_ylabel(f"Utility to Population")
+	weight_string = ", ".join([str(weight) for weight in weights])
+	title = f"Efficient Frontiers for Multiple Objectives\n(weights: {weight_string})"
 	plt.title(title)
-	ax.set_xlabel("Utility to $\\theta_0=0$ Individuals")
-	ax.set_ylabel("Utility to Entire Population")
-	x_raw = frontier.fstarvals_type0()
-	y_raw = frontier.fstarvals()
-	plt.plot(x_raw,y_raw,marker="o")
 	plt.show(block=False)
-	return fig,ax
+	if saving:
+		plt.savefig(f"figures/frontier_{generate_file_label()}.pdf", bbox_inches='tight')
+	return fig,axes,scat
 
-best,frontiers = solve_multiple_frontier()
+
+
+best,frontiers,dist = solve_multiple_frontier()
+num_in_each_frontier = {fn.__name__ : len(frontier.instances) for fn, frontier in frontiers.items()}
+while min(num_in_each_frontier.values()) < 7:
+	print("REPEATING SOLUTION TO GET MORE INTERESTING FRONTIERS")
+	best,frontiers,dist = solve_multiple_frontier()
+	num_in_each_frontier = {fn.__name__ : len(frontier.instances) for fn, frontier in frontiers.items()}
+# pickle.dump(dist,open('last_dist.pickle','wb'))
+
+print(num_in_each_frontier)
 # print([len(front.instances) for front in frontiers[SWB_dist]])
 # frontier = frontiers[SWB_dist][np.argmax([len(front.instances) for front in frontiers[SWB_dist]])]
 # fig,ax,xx,yy = plot_frontier(frontiers[SWB_dist])
 
+# plot_frontiers(best,frontiers)
 
-frontier = frontiers[SWB_dist]
-fig,ax = plot_frontier(frontier)
+saving = True
+fig,axes,scat = plot_tradeoff(best,frontiers,saving=saving)
+
+ax = axes[SWB_prob]
+pts = scat[SWB_prob]
+# frontier = frontiers[SWB_dist]
+# fig,ax = plot_frontier(frontier)
+
+
