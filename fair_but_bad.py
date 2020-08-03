@@ -27,35 +27,31 @@ theta_high = 1
 # beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
 
 # More Complex Min Cov
-nSelectedFac = 2 #1 or 2
-trial_label = "Minimum Cov(Type,P(Success))"
-indiv = np.array([[0.2,0.5],[0.3,0.4],[0.3,0.6],[0.8,0.4],[0.8,0.6],[0.9,0.5]])
-fac = np.array([[0.1,0.5],[0.3,0.5],[0.8,0.5]])
-theta = [theta_low]*3 +[theta_high]*3
-nIndiv = indiv.shape[0]
-nFac = fac.shape[0]
-beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
+# nSelectedFac = 1 #1 or 2
+# trial_label = "Minimum Cov(Type,P(Success))"
+# indiv = np.array([[0.2,0.5],[0.3,0.4],[0.3,0.6],[0.8,0.4],[0.8,0.6],[0.9,0.5]])
+# fac = np.array([[0.1,0.5],[0.3,0.5],[0.8,0.5]])
+# theta = [theta_low]*3 +[theta_high]*3
+# nIndiv = indiv.shape[0]
+# nFac = fac.shape[0]
+# beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
 
 
 # Min GE
-# nSelectedFac = 1
-# trial_label = "Minimum Generalized Entropy"
-# indiv = np.array([[0.5,0.1],[0.8,0.8],[0.75,0.9],[0.2,0.8],[0.25,0.9]])
-# indiv1 = np.array([[0.5,0.1]])
-# subNIndiv = 5
-# rad = 0.1
-# centers = [[0.25,0.75],[0.75,0.75]]
-# indiv2 = np.array([[center[0] + rad*np.cos(2*np.pi*(i/subNIndiv)), center[1]+ rad*np.sin(2*np.pi*(i/subNIndiv))] for center in centers for i in range(subNIndiv)])
-# indiv = np.concatenate((indiv1,indiv2))
-# fac = np.concatenate((np.array([[0.5,0.15]]),centers.copy() ))
-# nIndiv = indiv.shape[0]
-# nFac = fac.shape[0]
-# theta = [theta_low]*nIndiv
-# beta = [0,5,-1] #[beta0, beta_theta >0, beta_r <0]
-
-
-# theta = np.random.uniform(0,1,(nIndiv,1))
-# theta = np.array([np.random.choice([0,1]) for i in range(nIndiv)])
+nSelectedFac = 1
+trial_label = "Minimum Generalized Entropy"
+indiv = np.array([[0.5,0.1],[0.8,0.8],[0.75,0.9],[0.2,0.8],[0.25,0.9]])
+indiv1 = np.array([[0.5,0.1]])
+subNIndiv = 5
+rad = 0.1
+centers = [[0.25,0.75],[0.75,0.75]]
+indiv2 = np.array([[center[0] + rad*np.cos(2*np.pi*(i/subNIndiv)), center[1]+ rad*np.sin(2*np.pi*(i/subNIndiv))] for center in centers for i in range(subNIndiv)])
+indiv = np.concatenate((indiv1,indiv2))
+fac = np.concatenate((np.array([[0.5,0.15]]),centers.copy() ))
+nIndiv = indiv.shape[0]
+nFac = fac.shape[0]
+theta = [theta_low]*nIndiv
+beta = [0,5,-1] #[beta0, beta_theta >0, beta_r <0]
 
 
 
@@ -79,16 +75,16 @@ def solve_enumerative():
 		# extra_info = "max sum log prob"
 
 		## Negative Covariance
-		avg_theta = (1/nIndiv) * sum(theta) #should be 0.5
-		u =np.array( [-(1/nIndiv)* (theta[i] - avg_theta) / (1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*r[i])) for i in range(nIndiv)])
-		extra_info = "Minimum Cov(type,P(Success))"
+		# avg_theta = (1/nIndiv) * sum(theta) #should be 0.5
+		# u =np.array( [-(1/nIndiv)* (theta[i] - avg_theta) / (1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*r[i])) for i in range(nIndiv)])
+		# extra_info = "Minimum Cov(type,P(Success))"
 
 		# # Negative Generalized Entropy of Probability
-		# alpha = 0.01
-		# u =np.array( [1 / (1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*r[i])) for i in range(nIndiv)])
-		# mu = np.mean(u)
-		# u = (-1/(nIndiv*alpha *(alpha-1))) * np.array([(ui/mu)**alpha - 1 for ui in u])
-		# extra_info = "Minimum Generalized Entropy"
+		alpha = 0.01
+		u =np.array( [1 / (1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*r[i])) for i in range(nIndiv)])
+		mu = np.mean(u)
+		u = (-1/(nIndiv*alpha *(alpha-1))) * np.array([(ui/mu)**alpha - 1 for ui in u])
+		extra_info = "Minimum Generalized Entropy"
 
 		print(f"Obj is {sum(u)}")
 		if sum(u) > sum(uvals):
@@ -98,7 +94,7 @@ def solve_enumerative():
 			yvals[gp] = 1
 	print(f"Best obj is {sum(uvals)}")
 	fstar = sum(uvals)
-	prob_success = np.exp(uvals)
+	prob_success = [1/(1+exp(-beta[0] - beta[1]*theta[i] - beta[2]*rvals[i])) for i in range(nIndiv)]
 	print(f"Solved enumeratively")
 	return yvals,rvals,uvals,prob_success,fstar, extra_info
 
