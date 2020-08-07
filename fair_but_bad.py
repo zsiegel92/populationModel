@@ -5,6 +5,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from subset_helper import bax
+from function_helpers import setmeta
 matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
 
@@ -20,6 +21,7 @@ theta_high = 1
 ### Sum Logprob
 
 # sum logprob
+# @setmeta(extra_info="max sum log prob")
 # def sum_logprob(rr):
 # 	u = [-log(1+exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nIndiv)]
 # 	return u
@@ -28,32 +30,34 @@ theta_high = 1
 
 
 # Simplest Min Cov
-# nSelectedFac = 1
-# trial_label = "Minimum Cov(Type,P(Success))"
-# indiv = np.array([[0.4,0.5],[0.8,0.5]])
-# fac = np.array([[0.2,0.5],[0.6,0.5]])
-# theta = [theta_low,theta_high]
-# nIndiv = indiv.shape[0]
-# nFac = fac.shape[0]
-# beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
 
-
-## More Complex Min Cov
-nSelectedFac = 2 #1 or 2
+nSelectedFac = 1
 trial_label = "Minimum Cov(Type,P(Success))"
-indiv = np.array([[0.2,0.5],[0.3,0.4],[0.3,0.6],[0.8,0.4],[0.8,0.6],[0.9,0.5]])
-fac = np.array([[0.1,0.5],[0.3,0.5],[0.8,0.5]])
-theta = [theta_low]*3 +[theta_high]*3
+indiv = np.array([[0.4,0.5],[0.8,0.5]])
+fac = np.array([[0.2,0.5],[0.6,0.5]])
+theta = [theta_low,theta_high]
 nIndiv = indiv.shape[0]
 nFac = fac.shape[0]
 beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
+facLabels = ["A","B"]
+
+## More Complex Min Cov
+# nSelectedFac = 1 #1 or 2
+# trial_label = "Minimum Cov(Type,P(Success))"
+# indiv = np.array([[0.2,0.5],[0.3,0.4],[0.3,0.6],[0.8,0.4],[0.8,0.6],[0.9,0.5]])
+# fac = np.array([[0.1,0.5],[0.3,0.5],[0.8,0.5]])
+# theta = [theta_low]*3 +[theta_high]*3
+# nIndiv = indiv.shape[0]
+# nFac = fac.shape[0]
+# beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
+# facLabels = ["A","B","C"]
 
 ### Min Cov
+@setmeta(extra_info="Minimum Cov(type,P(Success))")
 def neg_covariance(rr):
 	avg_theta = (1/nIndiv) * sum(theta) #should be 0.5
 	u =np.array( [-(1/nIndiv)* (theta[i] - avg_theta) / (1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nIndiv)])
 	return u
-neg_covariance.extra_info = "Minimum Cov(type,P(Success))"
 obj_fn = neg_covariance
 
 
@@ -65,20 +69,22 @@ obj_fn = neg_covariance
 # subNIndiv = 5
 # rad = 0.1
 # centers = [[0.25,0.75],[0.75,0.75]]
-# indiv2 = np.array([[center[0] + rad*np.cos(2*np.pi*(i/subNIndiv)), center[1]+ rad*np.sin(2*np.pi*(i/subNIndiv))] for center in centers for i in range(subNIndiv)])
+# indiv2 = np.array([[center[0] + rad*np.cos(2*np.pi*(0.25+(i/subNIndiv))), center[1]+ rad*np.sin(2*np.pi*(0.25 + (i/subNIndiv)))] for center in centers for i in range(subNIndiv)])
 # indiv = np.concatenate((indiv1,indiv2))
 # fac = np.concatenate((np.array([[0.5,0.15]]),centers.copy() ))
 # nIndiv = indiv.shape[0]
 # nFac = fac.shape[0]
 # theta = [theta_low]*nIndiv
 # beta = [0,5,-1] #[beta0, beta_theta >0, beta_r <0]
+# facLabels = ["A","B","C"]
+
+# @setmeta(extra_info="Minimum Generalized Entropy")
 # def GE_fn(rr):
 # 	alpha = 0.01
 # 	u =np.array( [1 / (1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nIndiv)])
 # 	mu = np.mean(u)
 # 	u = (-1/(nIndiv*alpha *(alpha-1))) * np.array([(ui/mu)**alpha - 1 for ui in u])
 # 	return u
-# GE_fn.extra_info = "Minimum Generalized Entropy"
 # obj_fn = GE_fn
 
 
@@ -137,10 +143,10 @@ def plot_region(title_extra="",saving=False,extra_info=""):
 
 	## Plot Objectives
 	def plotObjectives():
-		obj_scatter = plt.scatter(indiv[:,0],indiv[:,1],marker="o",s=14**2,lw=2,alpha=0.5,c=prob_success,cmap="Greens",label="no_legend")
+		obj_scatter = plt.scatter(indiv[:,0],indiv[:,1],marker="o",s=14**2,lw=2,alpha=0.5,c=prob_success,cmap="cividis",label="no_legend")
 		obj_scatter.set_facecolor('none')
 		cbar = plt.colorbar(obj_scatter)
-		plt.clim(0,1)
+		# plt.clim(0,1)
 		cbar.ax.set_ylabel('P(success)')
 	plotObjectives()
 
@@ -165,6 +171,8 @@ def plot_region(title_extra="",saving=False,extra_info=""):
 		facility_labels = [f"{facility_states[yval]} {labelFacility}" for yval in yvals]
 		for i, coords in enumerate(fac):
 			plt.scatter(*coords,marker = "+",c=[facility_colors[i]],s=[facility_sizes[i]],label=facility_labels[i])
+		for i,lab in enumerate(facLabels):
+			plt.text(fac[i][0],fac[i][1]+.02,s=lab)
 	plotFacilities()
 
 	## Create Legend
