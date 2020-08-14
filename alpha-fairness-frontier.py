@@ -192,12 +192,13 @@ def average_frontiers(self,list_of_frontiers):
 
 def solve_multiple_frontier(saving=False):
 	bbax=bax()
-	frontiers = {fn: Frontier(fn) for fn in SWB_functions}
+	# frontiers = {fn: Frontier(fn) for fn in SWB_functions}
+	frontiers = {SWB_prob: Frontier(SWB_prob)}
 	best = {fn: None for fn in objective_functions}
 	indiv = [Person(theta[i],maxCoord = sizeRegion) for i in range(nIndiv)]
 	fac = [Facility(maxCoord = sizeRegion) for i in range(nFac)]
-	# dist = np.array([[person.dist(facility) for facility in fac] for person in indiv])
-	dist = pickle.load(open('last_dist.pickle','rb'))
+	dist = np.array([[person.dist(facility) for facility in fac] for person in indiv])
+	dist = pickle.load(open('last_dist_alpha.pickle','rb'))
 	total_subsets = bbax.enumerator.choose(nFac,nSelectedFac)
 	for ind, gp in enumerate(bbax.bax_gen(nFac,nSelectedFac)):
 		if ind % 1000 == 0:
@@ -265,12 +266,59 @@ def plot_tradeoffs(best,frontiers,saving=False):
 		ax.set_xticklabels(["$(1-\\frac{1}{e})L^*$", "$L^*$",])
 		ax.set_yticklabels(["$(1-\\frac{1}{e})A^*$", "$A^*$",])
 
+		# Plot alpha-guaranteed frontier
 		ax.plot(
-		        [L_at_AStar,efficiency*LStar],[efficiency*AStar,A_at_LStar],
+		        [0,efficiency*LStar],[efficiency*AStar,0],
 		        ls="--",
 		        label=f"$\\alpha$-Fair Greedy Guarantee",
-		        color="red"
+		        color="red",
+		        zorder=0,
+		        lw=0.5
 		        )
+
+		# Plot discrete guaranteed points
+		for i in range(nSelectedFac+1):
+			alpha = i/nSelectedFac
+			ax.scatter(
+			           [alpha*efficiency*LStar],[(1-alpha)*efficiency*AStar],
+			           label=f"no_legend",
+			           color='black',
+			           marker='.',
+			           zorder=2,
+			           s=10
+			           )
+			arrow_len = 0.04
+			arrow_width = .0004
+			arrow_head_width=6*arrow_width
+			arrow_head_length=1.5*arrow_head_width
+			#Horizontal Arrows
+			ax.arrow(
+			        alpha*efficiency*LStar,(1-alpha)*efficiency*AStar,
+			        arrow_len*LStar,0,
+			        # ls="--",
+			        width=arrow_width*AStar,
+			        head_width=arrow_head_width*AStar,
+			        head_length=arrow_head_length*LStar,
+			        length_includes_head=False,
+			        label=f"no_legend",
+			        color="red",
+			        zorder=1
+			        )
+			#Vertical Arrows
+			ax.arrow(
+			        alpha*efficiency*LStar,(1-alpha)*efficiency*AStar,
+			        0,arrow_len*AStar,
+			        # ls="--",
+			        width=arrow_width*LStar,
+			        head_width=arrow_head_width*LStar,
+			        head_length=arrow_head_length*AStar,
+			        length_includes_head=False,
+			        label=f"no_legend",
+			        color="red",
+			        zorder=1
+			        )
+
+
 		for (fn,frontier) in frontiers.items():
 			x_raw = frontier.fstarvals_type0(fn=plot_fn)
 			y_raw = frontier.fstarvals(fn=plot_fn)
@@ -289,15 +337,16 @@ def plot_tradeoffs(best,frontiers,saving=False):
 			        color=color_map[fn],
 			        marker=marker_map[fn],
 			        alpha=alpha,
-			        ls=ls
+			        ls=ls,
+			        markersize=2
 			        )
 
 		line_artists.extend(ax.collections.copy() + ax.lines.copy())
-		legend_dict = {artist.properties().get('label') : artist for artist in line_artists}
+		legend_dict = {lab : artist for artist in line_artists if 'no_legend' not in (lab:=artist.properties().get('label'))}
 		plt.legend(legend_dict.values(),legend_dict.keys(),loc='best')
-		ax.set_xlabel(f"L: {plot_fn.basebasename}-Utility\nfor type-{theta_low}")
-		ax.set_ylabel(f"A: {plot_fn.basebasename}-Utility\nfor Entire Population")
-		ax.set_title(f"'{plot_fn.basebasename}' Values\nof Other Efficient Solutions")
+		ax.set_xlabel(f"L: {plot_fn.basebasename}-Utility\nfor type-{theta_low} subpopulation")
+		ax.set_ylabel(f"A: {plot_fn.basebasename}-Utility\nfor entire population")
+		ax.set_title(f"Efficient Frontier of $P(Success)$ for Population vs Subpopulation")
 
 	plt.show(block=False)
 	if saving:
@@ -307,11 +356,12 @@ def plot_tradeoffs(best,frontiers,saving=False):
 
 best,frontiers,dist = solve_multiple_frontier()
 num_in_each_frontier = {fn.__name__ : len(frontier.instances) for fn, frontier in frontiers.items()}
-while min(num_in_each_frontier.values()) < 7:
-	print("REPEATING SOLUTION TO GET MORE INTERESTING FRONTIERS")
+required_to_be_interesting = 9
+while (frontier_complexity := min(num_in_each_frontier.values())) < required_to_be_interesting:
+	print(f"REPEATING SOLUTION TO GET MORE ({required_to_be_interesting}) INTERESTING FRONTIERS (got {frontier_complexity})")
 	best,frontiers,dist = solve_multiple_frontier()
 	num_in_each_frontier = {fn.__name__ : len(frontier.instances) for fn, frontier in frontiers.items()}
-# pickle.dump(dist,open('last_dist.pickle','wb'))
+# pickle.dump(dist,open('last_dist_alpha.pickle','wb'))
 
 print(num_in_each_frontier)
 # print([len(front.instances) for front in frontiers[SWB_dist]])
@@ -322,8 +372,9 @@ print(num_in_each_frontier)
 
 saving = True
 plot_tradeoffs(best,frontiers,saving=saving)
-
-
+plot_fn,plot_frontier = SWB_prob, frontiers[SWB_prob]
+print(f"\n\n{plot_frontier.fstarvals() = }\n\n{plot_frontier.fstarvals_type0() = }")
+print(f"\n\n{plot_frontier.get_L_AStar() = }\n\n{plot_frontier.get_LStar_A() = }")
 # frontier = frontiers[SWB_dist]
 # fig,ax = plot_frontier(frontier)
 

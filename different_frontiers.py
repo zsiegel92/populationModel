@@ -179,7 +179,7 @@ def solve_multiple_frontier(saving=False):
 	indiv = [Person(theta[i],maxCoord = sizeRegion) for i in range(nIndiv)]
 	fac = [Facility(maxCoord = sizeRegion) for i in range(nFac)]
 	# dist = np.array([[person.dist(facility) for facility in fac] for person in indiv])
-	dist = pickle.load(open('last_dist.pickle','rb'))
+	dist = pickle.load(open('last_dist_frontier_one_trial.pickle','rb'))
 	total_subsets = bbax.enumerator.choose(nFac,nSelectedFac)
 	for ind, gp in enumerate(bbax.bax_gen(nFac,nSelectedFac)):
 		if ind % 1000 == 0:
@@ -269,7 +269,7 @@ def plot_tradeoffs(best,frontiers,saving=False):
 
 	plt.show(block=False)
 	if saving:
-		plt.savefig(f"figures/alpha_frontier_{generate_file_label()}.pdf", bbox_inches='tight')
+		plt.savefig(f"figures/different_frontiers_{generate_file_label()}.pdf", bbox_inches='tight')
 
 
 

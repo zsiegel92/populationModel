@@ -26,14 +26,17 @@ def sum_log_prob_weighted_factory(weight):
 		uu = np.array([-llambda[i]*np.log(1+np.exp(-instance.beta[0] - instance.beta[1]*instance.theta[i] - instance.beta[2]*rr[i])) for i in range(nSamples)])
 		return uu
 	the_fn = sum_log_prob_weighted_function
+	the_fn.must_abs = False
 	the_fn.coeff = "\\lambda"
 	the_fn.basebasename = f"logprob"
 	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"logprob_weight{weight}"
 	the_fn.weight = weight
+	the_fn.weightstr = str(the_fn.weight)
 	the_fn.marker = markers[0]
 	the_fn.mpl_marker = mpl_markers[0]
 	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight}}}$"
+	the_fn.basemarker = f"${the_fn.marker}^{{{the_fn.coeff}}}$"
 	return the_fn
 
 def sum_prob_weighted_factory(weight):
@@ -44,14 +47,17 @@ def sum_prob_weighted_factory(weight):
 		uu =np.array( [llambda[i]/(1+np.exp(-instance.beta[0] - instance.beta[1]*instance.theta[i] - instance.beta[2]*rr[i])) for i in range(nSamples)])
 		return uu
 	the_fn = sum_prob_weighted_function
+	the_fn.must_abs = False
 	the_fn.coeff = "\\lambda"
 	the_fn.basebasename = f"prob"
 	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"prob_weight{weight}"
 	the_fn.weight = weight
+	the_fn.weightstr = str(the_fn.weight)
 	the_fn.marker = markers[1]
 	the_fn.mpl_marker = mpl_markers[1]
 	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight}}}$"
+	the_fn.basemarker = f"${the_fn.marker}^{{{the_fn.coeff}}}$"
 	return the_fn
 
 
@@ -66,14 +72,17 @@ def sum_distance_weighted_factory(weight):
 		uu = np.array([-llambda[i]*rr[i] for i in range(nSamples)])
 		return uu
 	the_fn = sum_distance_weighted_function
+	the_fn.must_abs = False
 	the_fn.coeff = "\\lambda"
 	the_fn.basebasename = f"distance"
 	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"distance_weight{weight}"
 	the_fn.weight = weight
+	the_fn.weightstr = str(the_fn.weight)
 	the_fn.marker = markers[2]
 	the_fn.mpl_marker = mpl_markers[2]
 	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight}}}$"
+	the_fn.basemarker = f"${the_fn.marker}^{{{the_fn.coeff}}}$"
 	return the_fn
 
 
@@ -83,30 +92,52 @@ def covariance_factory():
 		rr = instance.rvals
 		nSamples = len(instance.rvals)
 		avg_theta = (1/nSamples) * sum(instance.theta) #should be 0.5
-		uu =np.array( [-(1/nSamples)* (instance.theta[i] - avg_theta) / (1+np.exp(-instance.beta[0] - instance.beta[1]*instance.theta[i] - instance.beta[2]*rr[i])) for i in range(nSamples)])
+		uu = np.array( [-(1/nSamples)* (instance.theta[i] - avg_theta) / (1+np.exp(-instance.beta[0] - instance.beta[1]*instance.theta[i] - instance.beta[2]*rr[i])) for i in range(nSamples)]) #make utilities negative so as to MINIMIZE covariance (encourage higher type -> LOWER utility)
 		return uu
 	the_fn = covariance
-	the_fn.coeff = "\\lambda"
+	the_fn.must_abs = True
+
+	# def summer(instance):
+	# 	return abs(sum(the_fn(instance)))
+	# the_fn.summer = summer
+	the_fn.coeff = ""
 	the_fn.basename = f"Cov(type,P(success))"
 	the_fn.__name__ = f"Cov(type,P(success))"
 	the_fn.marker = markers[4]
+	the_fn.weight = ""
+	the_fn.weightstr = str(the_fn.weight)
 	the_fn.mpl_marker = mpl_markers[4]
 	the_fn.weighted_marker = f"${the_fn.marker}$"
+	the_fn.basemarker = f"${the_fn.marker}^{{{the_fn.coeff}}}$"
 	return the_fn
 
 def linear_combination_of_objectives(fn1,fn2,weight_fn2):
 	def linear_comb(instance):
 		return fn1(instance) + weight_fn2*fn2(instance)
 	the_fn = linear_comb
+	the_fn.must_abs = True
+	# def summer(vals):
+	# 	if fn1.self_sum:
+	# 		sum1 = fn1.summer(fn1(instance))
+	# 	else:
+	# 		sum1 = sum(fn1(instance))
+	# 	if fn2.self_sum:
+	# 		sum2 = fn2.summer(fn2(instance))
+	# 	else:
+	# 		sum2 = sum(fn2(instance))
+	# 	return sum1 + weight_fn2 * sum2
+	# the_fn.summer = summer
 	the_fn.coeff = "\\gamma"
 	the_fn.basename = f"{fn1.basename}+${the_fn.coeff}${fn2.basename}"
 	the_fn.__name__ = f"{fn1.__name__}+{weight_fn2}{fn2.__name__}"
 	# the_fn.weights = (fn1.weight,fn2.weight)
 	the_fn.weight_fn2 = weight_fn2
+	the_fn.weightstr = f"{weight_fn2}"#f"{fn1.weightstr}+{the_fn.weight_fn2}*{fn2.weightstr}"
 	the_fn.markers = (fn1.marker,fn2.marker)
 	the_fn.marker = markers[4]
 	the_fn.mpl_marker = mpl_markers[4]
-	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight_fn2}}}$"
+	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight_fn2}}}_{{{fn1.weight}{',' if fn2.weight else ''}{fn2.weight}}}$"
+	the_fn.basemarker = f"${the_fn.marker}^{{{the_fn.coeff}}}_{{{fn1.coeff}{',' if fn2.coeff else ''}{fn2.coeff}}}$"
 	return the_fn
 
 # def sum_distance(rr):

@@ -35,12 +35,13 @@ theta_high = 1
 nSelectedFac = 2
 trial_label = "Maximum $\\sum \\log(P(Success))$"
 indiv1 = np.array([[0.5,0.025]])
-subNIndiv = 10
+subNIndiv = 8
 rad = 0.05
 dx = 0.4
-dy = .75
+dy = .65
 centers = [[0.5-dx/2,dy],[0.5+dx/2,dy]]
-extra_displacements = np.linspace(rad/4,2*rad,subNIndiv)
+extra_displacements = np.linspace(0,2.5*rad,subNIndiv)
+# extra_displacements = 2*rad*np.random.rand(subNIndiv)
 indiv2 = np.array([[center[0] + (rad + extra_displacements[i])*np.cos(2*np.pi*(0.25+(i/subNIndiv))), center[1]+ (rad + extra_displacements[i])*np.sin(2*np.pi*(0.25 + (i/subNIndiv)))] for center in centers for i in range(subNIndiv)])
 indiv = np.concatenate((indiv1,indiv2))
 fac = np.concatenate((np.array([[0.5,0.1]]),centers.copy() ))
@@ -120,12 +121,14 @@ def plot_region_and_curves(the_fn,saving=False,extra_info=""):
 	prob_success = solns[the_fn]['prob_success']
 	colors = get_n_colors(6)
 	# color_type_map = {theta : colors.pop()}
-	markers = ['$/$','$\\backslash$','|','+','x','P','*','+','x','_']
+	markers = ['|','3','$/$','$\\backslash$','|','+','x','P','*','+','x','_']
+	marker_sizes = [80,45,60,60]
 	# markers = ['\\times','\\bigcirc','+','\\Box','\\dagger','\\Diamond','\\oplus','\\wedge','\\oslash','\\bullet','\\odot','\\triangleright','\\otimes',]
 	individual_color = colors.pop()
 	facility_color_map = {yval : colors.pop() for yval in set(yvals)}
 	function_color_map = {fn : colors.pop() for fn in obj_fns}
 	function_marker_map = {fn : markers.pop(0) for fn in obj_fns}
+	function_markersize_map = {fn : marker_sizes.pop(0) for fn in obj_fns}
 	facility_size_options = [5**2,9**2]
 	facility_states = ["Omitted", "Selected"]
 
@@ -196,7 +199,7 @@ def plot_region_and_curves(the_fn,saving=False,extra_info=""):
 				u = plot_obj_fn(r)
 				sumUtilities = sum(u)
 				optimality = "suboptimal" if sumUtilities < best_val else "optimal"
-				ax.scatter(r,u,color=function_color_map[fn],marker=function_marker_map[fn],label=f"Individual {plot_obj_fn.indiv_name} from Facilities {', '.join(soln['chosen_fac'])}\n{plot_obj_fn.name}={sumUtilities:.2f} ({optimality})",zorder=1,alpha=0.8,s=80)
+				ax.scatter(r,u,color=function_color_map[fn],marker=function_marker_map[fn],label=f"Individual {plot_obj_fn.indiv_name} from Facilities {', '.join(soln['chosen_fac'])}\n{plot_obj_fn.name}={sumUtilities:.2f} ({optimality})",zorder=1,alpha=0.65,edgecolors=None,s=function_markersize_map[fn])
 
 
 			legend_dict = {artist.properties().get('label') : artist for artist in ax.collections.copy() + ax.lines.copy() if "no_legend" not in artist.properties().get('label')}
@@ -212,7 +215,7 @@ def plot_region_and_curves(the_fn,saving=False,extra_info=""):
 	# fig.tight_layout()
 	plt.show(block=False)
 	if saving:
-		plt.savefig(f"figures/wishful_thinking_{generate_file_label()}.pdf", bbox_inches='tight')
+		plt.savefig(f"figures/anti_triage_{generate_file_label()}.pdf", bbox_inches='tight')
 
 
 	return fig,axes

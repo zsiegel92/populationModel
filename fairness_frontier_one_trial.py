@@ -3,11 +3,12 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import FuncFormatter
+from matplotlib.legend_handler import HandlerTuple
 from datetime import datetime
 import pickle
 from subset_helper import bax
 from function_factories_frontier import sum_log_prob_weighted_factory, sum_prob_weighted_factory,sum_distance_weighted_factory,mean_distance_function,mean_probability_function,type_covariance_function, price_of_fairness_distance_function, price_of_fairness_probability_function,markers,covariance_factory, linear_combination_of_objectives
-# matplotlib.use('TKAgg') #easier window management when not using IPython
+matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
 import sys
 
@@ -28,6 +29,10 @@ class Person(Facility):
 		self.ttheta = ttheta
 
 # Person(theta[i],maxCoord = sizeRegion)
+dumpFileName='last_dist_frontier_one_trial.pickle'
+saving = True
+loading = True
+dumping = not loading
 
 
 nIndiv = 50
@@ -53,25 +58,26 @@ theta_low_indices = [i for i in range(nIndiv) if theta[i]==theta_low]
 
 beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
 
-weights = [1,10] #should all be >= 1
+weights = [1,50] #should all be >= 1
 log_prob_obj_fns = [sum_log_prob_weighted_factory(w) for w in weights]
 prob_obj_fns = [sum_prob_weighted_factory(w) for w in weights]
 dist_obj_fns= [sum_distance_weighted_factory(w) for w in weights]
 SWB_dist = dist_obj_fns[0]
 SWB_prob = prob_obj_fns[0]
 SWB_logprob = log_prob_obj_fns[0]
-SWB_functions = [SWB_dist, SWB_prob,SWB_logprob]
+SWB_functions = [SWB_prob]#[SWB_dist, SWB_prob,SWB_logprob]
 cov_fn = covariance_factory()
 prob_plus_lambda_cov = [linear_combination_of_objectives(SWB_prob,cov_fn,w) for w in weights]
 
 objective_functions = log_prob_obj_fns + prob_obj_fns + dist_obj_fns + prob_plus_lambda_cov
+# objective_functions = prob_obj_fns + prob_plus_lambda_cov
 
-indices = [
-	{'name':'Mean Distance','key': 'mean_dist', 'shared':False,'fn':mean_distance_function},
-	{'name':'Mean Success Prob','key': 'mean_prob','shared':False,'fn':mean_probability_function},
-	{'name':'Covariance(type,success)','key': 'cov','shared':True,'fn':type_covariance_function},{'name':'Price of Fairness: Distance','key': 'pof_dist','shared':True,'fn':price_of_fairness_distance_function},
-	{'name':'Price of Fairness: Probability','key': 'pof_prob','shared':True,'fn':price_of_fairness_probability_function}
-	]
+# indices = [
+# 	{'name':'Mean Distance','key': 'mean_dist', 'shared':False,'fn':mean_distance_function},
+# 	{'name':'Mean Success Prob','key': 'mean_prob','shared':False,'fn':mean_probability_function},
+# 	{'name':'Covariance(type,success)','key': 'cov','shared':True,'fn':type_covariance_function},{'name':'Price of Fairness: Distance','key': 'pof_dist','shared':True,'fn':price_of_fairness_distance_function},
+# 	{'name':'Price of Fairness: Probability','key': 'pof_prob','shared':True,'fn':price_of_fairness_probability_function}
+# 	]
 
 
 objective_function_names = {fn.__name__ : fn for fn in objective_functions}
@@ -174,8 +180,10 @@ def solve_multiple_frontier(saving=False):
 	best = {fn: None for fn in objective_functions}
 	indiv = [Person(theta[i],maxCoord = sizeRegion) for i in range(nIndiv)]
 	fac = [Facility(maxCoord = sizeRegion) for i in range(nFac)]
-	# dist = np.array([[person.dist(facility) for facility in fac] for person in indiv])
-	dist = pickle.load(open('last_dist.pickle','rb'))
+	if loading:
+		dist = pickle.load(open(dumpFileName,'rb'))
+	else:
+		dist = np.array([[person.dist(facility) for facility in fac] for person in indiv])
 	total_subsets = bbax.enumerator.choose(nFac,nSelectedFac)
 	for ind, gp in enumerate(bbax.bax_gen(nFac,nSelectedFac)):
 		if ind % 1000 == 0:
@@ -218,10 +226,8 @@ def plot_tradeoff(best,frontiers,saving=False):
 	fig = plt.figure(figsize=(10,10))
 	axes = {}
 	colors = get_n_colors(len(best))
-	color_map = {fn : colors.pop() for fn in best}
+	color_map = {fn.weightstr : colors.pop() for fn in best}
 	# marker_map = {fn : f"${fn.marker}^{{{fn.weight}}}$" for fn in best}
-	marker_map = {fn : fn.weighted_marker for fn in best}
-	fake_marker_map = {fn : f"${fn.marker}^{{{fn.coeff}}}$" for fn in best}
 	line_artists = []
 	# point_legend_helper = {fn : (color_map[fn],fn.marker,fn.basename) for fn in best}
 	scat = {fn : [] for fn in best}
@@ -253,32 +259,33 @@ def plot_tradeoff(best,frontiers,saving=False):
 		x_raw = frontier.fstarvals_type0()
 		y_raw = frontier.fstarvals()
 		print(f"Plotting data for {fn.__name__}")
-		color = color_map[fn]
+		color = color_map[fn.weightstr]
 		linename = f"{fn.__name__} Efficient Frontier"
 		ax.plot(x_raw,y_raw,label=linename,color=color,marker="4",alpha=0.7)
 		line_artists.extend(ax.collections.copy() + ax.lines.copy())
 		print(f"Scattering for {fn.__name__}")
 		for other_fn, instance in best.items():
-			print(f"{other_fn.__name__}, ({instance.fstars_type0[fn]},{instance.fstars[fn]}), marker: {marker_map[other_fn]}")
-			x_inst = instance.fstars_type0[fn]# + np.random.rand()/200 #jittering
-			# x_inst_adjusted = x_inst
-			y_inst = instance.fstars[fn]# + np.random.rand()/200 #jittering
-			# y_inst_adjusted = scat_ydata_adjusted[ctr]
-			# x_inst = scat_xdata_adjusted[ctr]
-			# y_inst = scat_ydata_adjusted[ctr]
-			ctr += 1
-			# label = other_fn.__name__
-			label = f"{other_fn.__name__}"
-			scatcolor = color_map[fn]
-			scatplot = ax.scatter([x_inst],[y_inst],label=label,s=20**2,color=scatcolor,marker=marker_map[other_fn],alpha=0.8)
-			# arrow_size = marker_size/100
-			# arrow = ax.arrow(x_inst, y_inst_adjusted,0,y_inst-y_inst_adjusted, color='red',alpha=0.3, width=arrow_size*0.1, head_width=arrow_size, head_length=marker_size*0.5, zorder=0,length_includes_head=True)
+			if True: #other_fn != fn:
+				print(f"{other_fn.__name__}, ({instance.fstars_type0[fn]},{instance.fstars[fn]}), marker: {other_fn.weighted_marker}")
+				x_inst = instance.fstars_type0[fn]# + np.random.rand()/200 #jittering
+				# x_inst_adjusted = x_inst
+				y_inst = instance.fstars[fn]# + np.random.rand()/200 #jittering
+				# y_inst_adjusted = scat_ydata_adjusted[ctr]
+				# x_inst = scat_xdata_adjusted[ctr]
+				# y_inst = scat_ydata_adjusted[ctr]
+				ctr += 1
+				# label = other_fn.__name__
+				label = f"{other_fn.__name__}"
+				scatcolor = color_map[other_fn.weightstr]
+				scatplot = ax.scatter([x_inst],[y_inst],label=label,s=20**2,color=scatcolor,marker=other_fn.weighted_marker,alpha=0.8)
+				# arrow_size = marker_size/100
+				# arrow = ax.arrow(x_inst, y_inst_adjusted,0,y_inst-y_inst_adjusted, color='red',alpha=0.3, width=arrow_size*0.1, head_width=arrow_size, head_length=marker_size*0.5, zorder=0,length_includes_head=True)
 
-			fakelabel = f"{other_fn.basename}"
-			fakescatplot = matplotlib.lines.Line2D([], [],label=fakelabel,markersize=20,color=color_map[fn],marker=fake_marker_map[other_fn],alpha=0.8,linestyle='None')
-			# scat[fn].append(scatplot)
-			scat[fn].append(fakescatplot)
-
+				fakelabel = f"{other_fn.basename}"
+				fakescatplot = matplotlib.lines.Line2D([], [],label=fakelabel,markersize=20,color=scatcolor,marker=other_fn.basemarker,alpha=0.8,linestyle='None')
+				# scat[fn].append(scatplot)
+				scat[fn].append(fakescatplot)
+# fakescatplot = matplotlib.lines.Line2D([], [],label="hi",markersize=20,color="red",marker="+",alpha=0.8,linestyle='None')
 		ax.set_xticks([])
 		ax.set_yticks([])
 		ax.tick_params(axis='x', labelcolor=color)
@@ -289,9 +296,16 @@ def plot_tradeoff(best,frontiers,saving=False):
 	for fn,art_list in scat.items():
 		for artist in art_list:
 			artist_lab = artist.properties().get('label')
-			scat_dict[f"Value of {fn.__name__} at Optimal {artist_lab} "] = artist
+			scat_dict_key = f"Value of {fn.__name__} at Optimal {artist_lab}"
+			if not scat_dict.get(scat_dict_key):
+				scat_dict[scat_dict_key] = []
+			scat_dict[scat_dict_key].append(artist)
+	for k,l in scat_dict.items():
+		scat_dict[k].sort(key = lambda artist: str(artist.get_markeredgecolor()))
+		scat_dict[k] = tuple(l)
 	legend_dict = {**legend_dict,**scat_dict}
-	plt.legend(legend_dict.values(),legend_dict.keys(),loc='best') #,loc="upper right"bbox_to_anchor=(0.5, 0), ncol=len(legend_dict),fontsize='small'
+	print(scat_dict)
+	plt.legend(legend_dict.values(),legend_dict.keys(),loc='best',handler_map={tuple: HandlerTuple(ndivide=None)},labelspacing=0.9,handlelength=3.5) #,handletextpad=1.0,loc="upper right"bbox_to_anchor=(0.5, 0), ncol=len(legend_dict),fontsize='small'
 	# plt.setp(fig.get_axes(), xticks=[], yticks=[])
 	ax.set_xlabel(f"Utility to type-$0$ Individuals")
 	ax.set_ylabel(f"Utility to Population")
@@ -307,11 +321,14 @@ def plot_tradeoff(best,frontiers,saving=False):
 
 best,frontiers,dist = solve_multiple_frontier()
 num_in_each_frontier = {fn.__name__ : len(frontier.instances) for fn, frontier in frontiers.items()}
-while min(num_in_each_frontier.values()) < 7:
-	print("REPEATING SOLUTION TO GET MORE INTERESTING FRONTIERS")
+interesting_threshold = 9
+while min(num_in_each_frontier.values()) < interesting_threshold:
+	print(f"REPEATING SOLUTION TO GET MORE INTERESTING FRONTIERS (got {num_in_each_frontier.values()}, want >={interesting_threshold})")
 	best,frontiers,dist = solve_multiple_frontier()
 	num_in_each_frontier = {fn.__name__ : len(frontier.instances) for fn, frontier in frontiers.items()}
-# pickle.dump(dist,open('last_dist.pickle','wb'))
+
+if dumping:
+	pickle.dump(dist,open(dumpFileName,'wb'))
 
 print(num_in_each_frontier)
 # print([len(front.instances) for front in frontiers[SWB_dist]])
@@ -320,7 +337,7 @@ print(num_in_each_frontier)
 
 # plot_frontiers(best,frontiers)
 
-saving = True
+
 fig,axes,scat = plot_tradeoff(best,frontiers,saving=saving)
 
 ax = axes[SWB_prob]
