@@ -1,5 +1,5 @@
 import numpy as np
-# markers = ['.','v','P','*','+','x','_']
+mpl_markers = ['.','v','P','*','+','x','_']
 markers = ['\\times','\\bigcirc','+','\\Box','\\dagger','\\Diamond','\\oplus','\\wedge','\\oslash','\\bullet','\\odot','\\triangleright','\\otimes',]
 
 
@@ -27,10 +27,12 @@ def sum_log_prob_weighted_factory(weight):
 		return uu
 	the_fn = sum_log_prob_weighted_function
 	the_fn.coeff = "\\lambda"
-	the_fn.basename = f"logprob_weight${the_fn.coeff}$"
+	the_fn.basebasename = f"logprob"
+	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"logprob_weight{weight}"
 	the_fn.weight = weight
 	the_fn.marker = markers[0]
+	the_fn.mpl_marker = mpl_markers[0]
 	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight}}}$"
 	return the_fn
 
@@ -43,10 +45,12 @@ def sum_prob_weighted_factory(weight):
 		return uu
 	the_fn = sum_prob_weighted_function
 	the_fn.coeff = "\\lambda"
-	the_fn.basename = f"prob_weight${the_fn.coeff}$"
+	the_fn.basebasename = f"prob"
+	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"prob_weight{weight}"
 	the_fn.weight = weight
 	the_fn.marker = markers[1]
+	the_fn.mpl_marker = mpl_markers[1]
 	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight}}}$"
 	return the_fn
 
@@ -63,10 +67,12 @@ def sum_distance_weighted_factory(weight):
 		return uu
 	the_fn = sum_distance_weighted_function
 	the_fn.coeff = "\\lambda"
-	the_fn.basename = f"distance_weight${the_fn.coeff}$"
+	the_fn.basebasename = f"distance"
+	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"distance_weight{weight}"
 	the_fn.weight = weight
 	the_fn.marker = markers[2]
+	the_fn.mpl_marker = mpl_markers[2]
 	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight}}}$"
 	return the_fn
 
@@ -84,6 +90,7 @@ def covariance_factory():
 	the_fn.basename = f"Cov(type,P(success))"
 	the_fn.__name__ = f"Cov(type,P(success))"
 	the_fn.marker = markers[4]
+	the_fn.mpl_marker = mpl_markers[4]
 	the_fn.weighted_marker = f"${the_fn.marker}$"
 	return the_fn
 
@@ -98,6 +105,7 @@ def linear_combination_of_objectives(fn1,fn2,weight_fn2):
 	the_fn.weight_fn2 = weight_fn2
 	the_fn.markers = (fn1.marker,fn2.marker)
 	the_fn.marker = markers[4]
+	the_fn.mpl_marker = mpl_markers[4]
 	the_fn.weighted_marker = f"${the_fn.marker}^{{{the_fn.weight_fn2}}}$"
 	return the_fn
 

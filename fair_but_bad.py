@@ -19,27 +19,42 @@ theta_high = 1
 
 
 ### Sum Logprob
+nSelectedFac = 2
+trial_label = "Maximum $\\sum \\log(P(Success))$"
+indiv1 = np.array([[0.5,0.05]])
+subNIndiv = 10
+rad = 0.05
+dx = 0.4
+dy = .75
+centers = [[0.5-dx/2,dy],[0.5+dx/2,dy]]
+indiv2 = np.array([[center[0] + rad*np.cos(2*np.pi*(0.25+(i/subNIndiv))), center[1]+ rad*np.sin(2*np.pi*(0.25 + (i/subNIndiv)))] for center in centers for i in range(subNIndiv)])
+indiv = np.concatenate((indiv1,indiv2))
+fac = np.concatenate((np.array([[0.5,0.1]]),centers.copy() ))
+nIndiv = indiv.shape[0]
+nFac = fac.shape[0]
+theta = [theta_low]*nIndiv
+beta = [4,0,-18] #[beta0, beta_theta >0, beta_r <0]
+facLabels = ["A","B","C"]
 
-# sum logprob
-# @setmeta(extra_info="max sum log prob")
-# def sum_logprob(rr):
-# 	u = [-log(1+exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nIndiv)]
-# 	return u
-# sum_logprob.extra_info = "max sum log prob"
-# obj_fn=sum_logprob
+
+@setmeta(extra_info="$\\sum \\log(P(success))$")
+def sum_logprob(rr):
+	u = [-log(1+exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nIndiv)]
+	return u
+obj_fn=sum_logprob
 
 
 # Simplest Min Cov
 
-nSelectedFac = 1
-trial_label = "Minimum Cov(Type,P(Success))"
-indiv = np.array([[0.4,0.5],[0.8,0.5]])
-fac = np.array([[0.2,0.5],[0.6,0.5]])
-theta = [theta_low,theta_high]
-nIndiv = indiv.shape[0]
-nFac = fac.shape[0]
-beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
-facLabels = ["A","B"]
+# nSelectedFac = 1
+# trial_label = "Minimum Cov(Type,P(Success))"
+# indiv = np.array([[0.4,0.5],[0.8,0.5]])
+# fac = np.array([[0.2,0.5],[0.6,0.5]])
+# theta = [theta_low,theta_high]
+# nIndiv = indiv.shape[0]
+# nFac = fac.shape[0]
+# beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
+# facLabels = ["A","B"]
 
 ## More Complex Min Cov
 # nSelectedFac = 1 #1 or 2
@@ -53,12 +68,12 @@ facLabels = ["A","B"]
 # facLabels = ["A","B","C"]
 
 ### Min Cov
-@setmeta(extra_info="Minimum Cov(type,P(Success))")
-def neg_covariance(rr):
-	avg_theta = (1/nIndiv) * sum(theta) #should be 0.5
-	u =np.array( [-(1/nIndiv)* (theta[i] - avg_theta) / (1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nIndiv)])
-	return u
-obj_fn = neg_covariance
+# @setmeta(extra_info="Minimum Cov(type,P(Success))")
+# def neg_covariance(rr):
+# 	avg_theta = (1/nIndiv) * sum(theta) #should be 0.5
+# 	u =np.array( [-(1/nIndiv)* (theta[i] - avg_theta) / (1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nIndiv)])
+# 	return u
+# obj_fn = neg_covariance
 
 
 # Min GE
@@ -138,6 +153,14 @@ def plot_region(title_extra="",saving=False,extra_info=""):
 	plt.title(title)
 
 	## Plot Region
+	# minx = min(xx for (xx,yy) in indiv)
+	# maxx = max(xx for (xx,yy) in indiv)
+	# miny = min(yy for (xx,yy) in indiv)
+	# maxy = max(yy for (xx,yy) in indiv)
+	# sizex = maxx-minx
+	# sizey = maxy-miny
+	# margin = .01
+	# region = patches.Rectangle((minx-margin*sizex,miny-margin*sizey),(1+margin)*sizex,(1+margin)*sizey,linewidth=1,edgecolor=colors.pop(),facecolor="none")
 	region = patches.Rectangle((0,0),sizeRegion,sizeRegion,linewidth=1,edgecolor=colors.pop(),facecolor="none")
 	ax.add_patch(region)
 
@@ -172,7 +195,7 @@ def plot_region(title_extra="",saving=False,extra_info=""):
 		for i, coords in enumerate(fac):
 			plt.scatter(*coords,marker = "+",c=[facility_colors[i]],s=[facility_sizes[i]],label=facility_labels[i])
 		for i,lab in enumerate(facLabels):
-			plt.text(fac[i][0],fac[i][1]+.02,s=lab)
+			plt.text(fac[i][0],fac[i][1]+.01,s=lab)
 	plotFacilities()
 
 	## Create Legend
