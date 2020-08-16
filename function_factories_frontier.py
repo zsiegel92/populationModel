@@ -19,15 +19,17 @@ def create_tex_marker_with_number(marker,number):
 	return f"${marker}^{{{number}}}$"
 
 def sum_log_prob_weighted_factory(weight):
+	high_weight = (1-weight)/2
+	low_weight = (1+weight)/2
 	def sum_log_prob_weighted_function(instance):
 		rr = instance.rvals
 		nSamples = len(instance.rvals)
-		llambda = [weight if instance.theta[i] != instance.theta_high else 1 for i in range(nSamples) ]
+		llambda = [low_weight if instance.theta[i] != instance.theta_high else high_weight for i in range(nSamples) ]
 		uu = np.array([-llambda[i]*np.log(1+np.exp(-instance.beta[0] - instance.beta[1]*instance.theta[i] - instance.beta[2]*rr[i])) for i in range(nSamples)])
 		return uu
 	the_fn = sum_log_prob_weighted_function
 	the_fn.must_abs = False
-	the_fn.coeff = "\\lambda"
+	the_fn.coeff = "\\alpha"
 	the_fn.basebasename = f"logprob"
 	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"logprob_weight{weight}"
@@ -40,15 +42,17 @@ def sum_log_prob_weighted_factory(weight):
 	return the_fn
 
 def sum_prob_weighted_factory(weight):
+	high_weight = (1-weight)/2
+	low_weight = (1+weight)/2
 	def sum_prob_weighted_function(instance):
 		rr = instance.rvals
 		nSamples = len(instance.rvals)
-		llambda = [weight if instance.theta[i] != instance.theta_high else 1 for i in range(nSamples) ]
+		llambda = [low_weight if instance.theta[i] != instance.theta_high else high_weight for i in range(nSamples) ]
 		uu =np.array( [llambda[i]/(1+np.exp(-instance.beta[0] - instance.beta[1]*instance.theta[i] - instance.beta[2]*rr[i])) for i in range(nSamples)])
 		return uu
 	the_fn = sum_prob_weighted_function
 	the_fn.must_abs = False
-	the_fn.coeff = "\\lambda"
+	the_fn.coeff = "\\alpha"
 	the_fn.basebasename = f"prob"
 	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"prob_weight{weight}"
@@ -62,10 +66,12 @@ def sum_prob_weighted_factory(weight):
 
 
 def sum_distance_weighted_factory(weight):
+	high_weight = (1-weight)/2
+	low_weight = (1+weight)/2
 	def sum_distance_weighted_function(instance):
 		rr = instance.rvals
 		nSamples = len(instance.rvals)
-		llambda = [weight if instance.theta[i] != instance.theta_high else 1 for i in range(nSamples) ]
+		llambda = [low_weight if instance.theta[i] != instance.theta_high else high_weight for i in range(nSamples) ]
 		# llambda = np.ones(nSamples)
 		# llambda[instance.theta_low_indices] = weight
 		# uu = np.array([-llambda[i]*rr[i] for i in range(nSamples)])
@@ -73,7 +79,7 @@ def sum_distance_weighted_factory(weight):
 		return uu
 	the_fn = sum_distance_weighted_function
 	the_fn.must_abs = False
-	the_fn.coeff = "\\lambda"
+	the_fn.coeff = "\\alpha"
 	the_fn.basebasename = f"distance"
 	the_fn.basename = f"{the_fn.basebasename}_weight${the_fn.coeff}$"
 	the_fn.__name__ = f"distance_weight{weight}"
@@ -112,8 +118,10 @@ def covariance_factory():
 	return the_fn
 
 def linear_combination_of_objectives(fn1,fn2,weight_fn2):
+	fn1_weight = (1-weight_fn2)/2
+	fn2_weight = (1+weight_fn2)/2
 	def linear_comb(instance):
-		return fn1(instance) + weight_fn2*fn2(instance)
+		return fn1_weight * fn1(instance) + fn2_weight * fn2(instance)
 	the_fn = linear_comb
 	the_fn.must_abs = True
 	# def summer(vals):
@@ -131,6 +139,7 @@ def linear_combination_of_objectives(fn1,fn2,weight_fn2):
 	the_fn.basename = f"{fn1.basename}+${the_fn.coeff}${fn2.basename}"
 	the_fn.__name__ = f"{fn1.__name__}+{weight_fn2}{fn2.__name__}"
 	# the_fn.weights = (fn1.weight,fn2.weight)
+	the_fn.weight = weight_fn2
 	the_fn.weight_fn2 = weight_fn2
 	the_fn.weightstr = f"{weight_fn2}"#f"{fn1.weightstr}+{the_fn.weight_fn2}*{fn2.weightstr}"
 	the_fn.markers = (fn1.marker,fn2.marker)

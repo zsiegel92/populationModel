@@ -3,14 +3,17 @@ import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.ticker import FuncFormatter
+from matplotlib.colors import Normalize
+from matplotlib.cm import ScalarMappable
 from matplotlib.legend_handler import HandlerTuple
 from datetime import datetime
 import pickle
+import sys
 from subset_helper import bax
 from function_factories_frontier import sum_log_prob_weighted_factory, sum_prob_weighted_factory,sum_distance_weighted_factory,mean_distance_function,mean_probability_function,type_covariance_function, price_of_fairness_distance_function, price_of_fairness_probability_function,markers,covariance_factory, linear_combination_of_objectives
 matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
-import sys
+
 
 class Facility:
 	def __init__(self,location=None,maxCoord=None,*args,**kwargs):
@@ -27,38 +30,53 @@ class Person(Facility):
 	def __init__(self,ttheta, location=None,*args,**kwargs):
 		super().__init__(location,*args,**kwargs)
 		self.ttheta = ttheta
+sizeRegion = 1
+theta_low = 0
+theta_high = 1
 
-# Person(theta[i],maxCoord = sizeRegion)
 dumpFileName='last_dist_frontier_one_trial.pickle'
 saving = True
 loading = True
 dumping = not loading
 
 
+# ### Covariance Linear Combination (start)
+# title = f"Efficient Frontier of $\\sum P(Success)$\nwith Objectives Minimizing $(1-\\gamma)P(Success) + \\gamma Cov(type,P(Success))$"
+# colorbar_label= "$\\gamma$"
+# trial_label = f"Cov_efficiency"
+# nIndiv = 50
+# nFac = 20
+# nSelectedFac = 4
+# theta = [theta_low for i in range(nIndiv//2)] + [theta_high for i in range(nIndiv - (nIndiv//2))]
+# nIndiv = len(theta)
+# theta_low_indices = [i for i in range(nIndiv) if theta[i]==theta_low]
+# beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
+# weights = [0,.9,0.95,.98] #should all be in [0,1]
+# log_prob_obj_fns = [sum_log_prob_weighted_factory(w) for w in weights]
+# prob_obj_fns = [sum_prob_weighted_factory(w) for w in weights]
+# dist_obj_fns= [sum_distance_weighted_factory(w) for w in weights]
+# SWB_dist = dist_obj_fns[0]
+# SWB_prob = prob_obj_fns[0]
+# SWB_logprob = log_prob_obj_fns[0]
+# SWB_functions = [SWB_prob]#[SWB_dist, SWB_prob,SWB_logprob]
+# cov_fn = covariance_factory()
+# prob_plus_lambda_cov = [linear_combination_of_objectives(SWB_prob,cov_fn,w) for w in weights]
+# objective_functions = prob_plus_lambda_cov
+# all_objectives_for_frontier_and_obj = list(set(SWB_functions + objective_functions))
+# ### Covariance Linear Combination (end)
+
+### SWN (start)
+title = f"Efficient Frontier of $\\sum P(Success)$\nwith Objectives Minimizing $\\alpha$-Fair $\\sum\\log(P(Success))$"
+colorbar_label= "$\\alpha$"
+trial_label = f"log_prob_alpha_fair"
 nIndiv = 50
 nFac = 20
 nSelectedFac = 4
-
-##TESTING
-# nIndiv = 40
-# nFac = 20
-# nSelectedFac = 4
-
-
-
-sizeRegion = 1
-
-
-theta_low = 0
-theta_high = 1
 theta = [theta_low for i in range(nIndiv//2)] + [theta_high for i in range(nIndiv - (nIndiv//2))]
 nIndiv = len(theta)
-# np.random.shuffle(theta)
 theta_low_indices = [i for i in range(nIndiv) if theta[i]==theta_low]
-
 beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
-
-weights = [1,50] #should all be >= 1
+weights = [0,0.5,0.75,0.9] #should all be in [0,1]
 log_prob_obj_fns = [sum_log_prob_weighted_factory(w) for w in weights]
 prob_obj_fns = [sum_prob_weighted_factory(w) for w in weights]
 dist_obj_fns= [sum_distance_weighted_factory(w) for w in weights]
@@ -68,22 +86,13 @@ SWB_logprob = log_prob_obj_fns[0]
 SWB_functions = [SWB_prob]#[SWB_dist, SWB_prob,SWB_logprob]
 cov_fn = covariance_factory()
 prob_plus_lambda_cov = [linear_combination_of_objectives(SWB_prob,cov_fn,w) for w in weights]
-
-objective_functions = log_prob_obj_fns + prob_obj_fns + dist_obj_fns + prob_plus_lambda_cov
-# objective_functions = prob_obj_fns + prob_plus_lambda_cov
-
-# indices = [
-# 	{'name':'Mean Distance','key': 'mean_dist', 'shared':False,'fn':mean_distance_function},
-# 	{'name':'Mean Success Prob','key': 'mean_prob','shared':False,'fn':mean_probability_function},
-# 	{'name':'Covariance(type,success)','key': 'cov','shared':True,'fn':type_covariance_function},{'name':'Price of Fairness: Distance','key': 'pof_dist','shared':True,'fn':price_of_fairness_distance_function},
-# 	{'name':'Price of Fairness: Probability','key': 'pof_prob','shared':True,'fn':price_of_fairness_probability_function}
-# 	]
+objective_functions = log_prob_obj_fns
+all_objectives_for_frontier_and_obj = list(set(SWB_functions + objective_functions))
+### SWN (end)
 
 
-objective_function_names = {fn.__name__ : fn for fn in objective_functions}
 
-fairness_ratings = [10**10 + weight for weight in weights]+ [10**5 + weight for weight in weights] + weights #arbitrary, but roughly increasing with fairness-inducing tendency
-fairness_strengths = dict(zip(objective_functions,fairness_ratings)) # to create a consistent order in plot legends
+
 
 def add_dict_lists(dict1,dict2):
 		return {k: np.concatenate((dict1[k], dict2[k])) for k in dict1}
@@ -102,19 +111,19 @@ class Instance:
 		if uvals is not None:
 			self.uvals = uvals
 		else:
-			self.uvals = {fn: fn(self) for fn in objective_functions}
+			self.uvals = {fn: fn(self) for fn in all_objectives_for_frontier_and_obj}
 		if fstars is not None:
 			self.fstars = fstars
 		else:
-			self.fstars = {fn: sum(self.uvals[fn]) for fn in objective_functions}
+			self.fstars = {fn: sum(self.uvals[fn]) for fn in all_objectives_for_frontier_and_obj}
 		if uvals_type0 is not None:
 			self.uvals_type0 = uvals_type0
 		else:
-			self.uvals_type0 = {fn: self.uvals[fn][theta_low_indices] for fn in objective_functions}
+			self.uvals_type0 = {fn: self.uvals[fn][theta_low_indices] for fn in all_objectives_for_frontier_and_obj}
 		if fstars_type0 is not None:
 			self.fstars_type0 = fstars_type0
 		else:
-			self.fstars_type0 = {fn: sum(self.uvals_type0[fn]) for fn in objective_functions}
+			self.fstars_type0 = {fn: sum(self.uvals_type0[fn]) for fn in all_objectives_for_frontier_and_obj}
 	def combine(self, other_instance):
 		if other_instance is not None:
 			# print(f"len(self.rvals: {len(self.rvals)}, len(other_instance.rvals): {len(other_instance.rvals)}")
@@ -122,9 +131,9 @@ class Instance:
 							rvals = self.rvals + other_instance.rvals,
 							yvals = self.yvals + other_instance.yvals,
 							uvals = add_dict_lists(self.uvals,other_instance.uvals),
-							fstars = {fn: sum(self.uvals[fn]) for fn in objective_functions},
+							fstars = {fn: sum(self.uvals[fn]) for fn in all_objectives_for_frontier_and_obj},
 							uvals_type0 = add_dict_lists(self.uvals_type0,other_instance.uvals_type0),
-							fstars_type0 = {fn: sum(self.uvals_type0[fn]) for fn in objective_functions}
+							fstars_type0 = {fn: sum(self.uvals_type0[fn]) for fn in all_objectives_for_frontier_and_obj}
 							)
 		else:
 			return self
@@ -142,7 +151,7 @@ class Instance:
 		return self.fstars[fn] > other_instance.fstars[fn] and self.fstars_type0[fn] > other_instance.fstars_type0[fn]
 
 	def dominators(self,other_instance):
-		return {fn: (self.fstars[fn] > other_instance.fstars[fn] and self.fstars_type0[fn] > other_instance.fstars_type0[fn]) for fn in objective_functions}
+		return {fn: (self.fstars[fn] > other_instance.fstars[fn] and self.fstars_type0[fn] > other_instance.fstars_type0[fn]) for fn in all_objectives_for_frontier_and_obj}
 	def sort_key(self,fn):
 		return self.fstars[fn]
 
@@ -219,18 +228,35 @@ def get_n_colors(number_desired_colors):
 		colors = [cmap(i) for i in range(number_desired_colors)]
 	return colors
 
+class MidpointNormalize(Normalize):
+    def __init__(self, vmin=None, vmax=None, midpoint=None, clip=False):
+        self.midpoint = midpoint
+        Normalize.__init__(self, vmin, vmax, clip)
 
+    def __call__(self, value, clip=None):
+        # I'm ignoring masked values and all kinds of edge cases to make a
+        # simple example...
+        x, y = [self.vmin, self.midpoint, self.vmax], [0, 0.5, 1]
+        return np.ma.masked_array(np.interp(value, x, y))
 
 def plot_tradeoff(best,frontiers,saving=False):
 	# fig, ax = plt.subplots(figsize=(10,10))
 	fig = plt.figure(figsize=(10,10))
 	axes = {}
-	colors = get_n_colors(len(best))
-	color_map = {fn.weightstr : colors.pop() for fn in best}
+
+	cmap = plt.cm.get_cmap('cividis')
+	# norm = Normalize(vmin=min([weight for weight in weights if weight > 0]), vmax=max(weights))
+	norm = MidpointNormalize(vmin=min(weights),vmax=max(weights),midpoint=np.median(weights))
+	sm = ScalarMappable(norm=norm, cmap=cmap)
+	# sm.to_rgba(other_fn.weight)
+
+
+	# colors = get_n_colors(len(all_objectives_for_frontier_and_obj))
+	color_map = {fn.weightstr : sm.to_rgba(fn.weight) for fn in best} #colors.pop()
 	# marker_map = {fn : f"${fn.marker}^{{{fn.weight}}}$" for fn in best}
 	line_artists = []
 	# point_legend_helper = {fn : (color_map[fn],fn.marker,fn.basename) for fn in best}
-	scat = {fn : [] for fn in best}
+	scat = {fn : [] for fn in frontiers}
 
 	scat_xdata = [instance.fstars_type0[fn] for i,(fn,frontier) in enumerate(frontiers.items()) for (other_fn,instance) in best.items()]
 	scat_ydata = [instance.fstars[fn] for i,(fn,frontier) in enumerate(frontiers.items()) for (other_fn,instance) in best.items()]
@@ -255,13 +281,15 @@ def plot_tradeoff(best,frontiers,saving=False):
 	ctr = 0
 	for i, (fn, frontier) in enumerate(frontiers.items()):
 		ax = fig.add_subplot(111,label=fn.__name__,frame_on=False)
+		cbar = fig.colorbar(sm,ax=ax,drawedges=False)
+		cbar.ax.set_ylabel(f"{colorbar_label}")
 		axes[fn] = ax
 		x_raw = frontier.fstarvals_type0()
 		y_raw = frontier.fstarvals()
 		print(f"Plotting data for {fn.__name__}")
 		color = color_map[fn.weightstr]
 		linename = f"{fn.__name__} Efficient Frontier"
-		ax.plot(x_raw,y_raw,label=linename,color=color,marker="4",alpha=0.7)
+		ax.plot(x_raw,y_raw,label=linename,color="black",marker="4",alpha=0.7)
 		line_artists.extend(ax.collections.copy() + ax.lines.copy())
 		print(f"Scattering for {fn.__name__}")
 		for other_fn, instance in best.items():
@@ -296,7 +324,7 @@ def plot_tradeoff(best,frontiers,saving=False):
 	for fn,art_list in scat.items():
 		for artist in art_list:
 			artist_lab = artist.properties().get('label')
-			scat_dict_key = f"Value of {fn.__name__} at Optimal {artist_lab}"
+			scat_dict_key = f"Optimal {artist_lab}"
 			if not scat_dict.get(scat_dict_key):
 				scat_dict[scat_dict_key] = []
 			scat_dict[scat_dict_key].append(artist)
@@ -305,16 +333,15 @@ def plot_tradeoff(best,frontiers,saving=False):
 		scat_dict[k] = tuple(l)
 	legend_dict = {**legend_dict,**scat_dict}
 	print(scat_dict)
-	plt.legend(legend_dict.values(),legend_dict.keys(),loc='best',handler_map={tuple: HandlerTuple(ndivide=None)},labelspacing=0.9,handlelength=3.5) #,handletextpad=1.0,loc="upper right"bbox_to_anchor=(0.5, 0), ncol=len(legend_dict),fontsize='small'
+	plt.legend(legend_dict.values(),legend_dict.keys(),loc='lower left',handler_map={tuple: HandlerTuple(ndivide=None)},labelspacing=0.9,handlelength=3.5) #,handletextpad=1.0,loc="upper right"bbox_to_anchor=(0.5, 0), ncol=len(legend_dict),fontsize='small'
 	# plt.setp(fig.get_axes(), xticks=[], yticks=[])
 	ax.set_xlabel(f"Utility to type-$0$ Individuals")
 	ax.set_ylabel(f"Utility to Population")
 	weight_string = ", ".join([str(weight) for weight in weights])
-	title = f"Efficient Frontiers for Multiple Objectives\n(weights: {weight_string})"
 	plt.title(title)
 	plt.show(block=False)
 	if saving:
-		plt.savefig(f"figures/frontier_{generate_file_label()}.pdf", bbox_inches='tight')
+		plt.savefig(f"figures/frontier_{trial_label}_{generate_file_label()}.pdf", bbox_inches='tight')
 	return fig,axes,scat
 
 

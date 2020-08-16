@@ -3,33 +3,39 @@ import numpy as np
 def sum_log_prob_weighted_factory(weight,beta,theta):
 	nSamples = len(theta)
 	theta_high = max(theta)
-	llambda = [weight if (theta[i] != theta_high) else 1 for i in range(nSamples)]
+	high_type_coef = (1-weight)/2
+	low_type_coef = (1+weight)/2
+	llambda = [low_type_coef if (theta[i] != theta_high) else high_type_coef for i in range(nSamples)]
 	def sum_log_prob_weighted_function(rr):
 		uu = [-llambda[i]*np.log(1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nSamples)]
 		return uu
 
-	sum_log_prob_weighted_function.__name__ = f"logprob_weight{weight}"
+	sum_log_prob_weighted_function.__name__ = f"logprob_$\\alpha{weight}$"
 	return sum_log_prob_weighted_function
 
 def sum_prob_weighted_factory(weight,beta,theta):
 	theta_high = max(theta)
 	nSamples = len(theta)
-	llambda = [weight if (theta[i] != theta_high) else 1 for i in range(nSamples)]
+	high_type_coef = (1-weight)/2
+	low_type_coef = (1+weight)/2
+	llambda = [low_type_coef if (theta[i] != theta_high) else high_type_coef for i in range(nSamples)]
 	def sum_prob_weighted_function(rr):
 		uu = [llambda[i]/(1+np.exp(-beta[0] - beta[1]*theta[i] - beta[2]*rr[i])) for i in range(nSamples)]
 		return uu
-	sum_prob_weighted_function.__name__ = f"prob_weight{weight}"
+	sum_prob_weighted_function.__name__ = f"prob_$\\alpha{weight}$"
 	return sum_prob_weighted_function
 
 
 def sum_distance_weighted_factory(weight,theta):
 	theta_high = max(theta)
 	nSamples = len(theta)
-	llambda = [weight if (theta[i] != theta_high) else 1 for i in range(nSamples)]
+	high_type_coef = (1-weight)/2
+	low_type_coef = (1+weight)/2
+	llambda = [low_type_coef if (theta[i] != theta_high) else high_type_coef for i in range(nSamples)]
 	def sum_distance_weighted_function(rr):
 		uu = [-llambda[i]*rr[i] for i in range(nSamples)]
 		return uu
-	sum_distance_weighted_function.__name__ = f"distance_weight{weight}"
+	sum_distance_weighted_function.__name__ = f"distance_$\\alpha{weight}$"
 	return sum_distance_weighted_function
 
 

@@ -11,7 +11,7 @@ matplotlib.use('TKAgg') #easier window management when not using IPython
 # matplotlib.rcParams['text.usetex'] = True
 
 
-nIndiv = 100
+nIndiv = 50
 nFac = 8
 nSelectedFac = 4
 nTrials = 500
@@ -26,13 +26,13 @@ np.random.shuffle(theta)
 
 beta = [0,0.5,-10] #[beta0, beta_theta >0, beta_r <0]
 
-weights = [1,5,1000] #should all be >= 1
+weights = [0,0.9,0.99] #should all be >= 1
 log_prob_obj_fns = [sum_log_prob_weighted_factory(w,beta,theta) for w in weights]
 prob_obj_fns = [sum_prob_weighted_factory(w,beta,theta) for w in weights]
 dist_obj_fns= [sum_distance_weighted_factory(w,theta) for w in weights]
 objective_functions = log_prob_obj_fns + prob_obj_fns + dist_obj_fns
 SWB_dist_obj = dist_obj_fns[0]
-# SWB_prob_obj = sum_prob_weighted_factory(1,beta,theta)
+SWB_prob_obj = prob_obj_fns[0] #sum_prob_weighted_factory(1,beta,theta)
 # SWB_index = objective_functions.index(SWB_prob_obj)
 
 
@@ -120,9 +120,10 @@ def post_process(data, want_to_plot_key,quantityLabel):
 	# SWB_dist_obj = sum_distance_weighted_factory(1,beta,theta)
 	# SWB_prob_obj = sum_prob_weighted_factory(1,beta,theta)
 	base_vals_dist = {k : values_dict[SWB_dist_obj] for k,values_dict in data.items()}
+	base_vals_prob = {k : values_dict[SWB_prob_obj] for k,values_dict in data.items()}
 	# base_vals_prob = {k : values_dict[SWB_prob_obj] for k,values_dict in data.items()}
 	SWB_dist = -1*sum(base_vals_dist['rvals'])
-	SWB_prob = sum(base_vals_dist['prob_success_vals']) # SWB_prob
+	SWB_prob = sum(base_vals_prob['prob_success_vals']) # SWB_prob
 
 	lumped_functions =  {choice : [fn for fn in objective_functions if yvals[fn]==choice] for choice in yvals_choices}
 	lumped_labels =  {choice : ",\n".join([f"{fn.__name__} $typeLabel" for fn in objective_functions if yvals[fn]==choice]) for choice in yvals_choices}
