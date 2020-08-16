@@ -302,7 +302,7 @@ def plot_tradeoff(best,frontiers,saving=False):
 		ax2.tick_params(axis="y",labelcolor=ax2color)
 
 		ax1_legend = {artistlist[0].properties().get('label') : artistlist[0] for artistlist in [ax1line,ax2line]}
-		ax1.legend(ax1_legend.values(),ax1_legend.keys(),loc='best') #
+		ax1.legend(ax1_legend.values(),ax1_legend.keys(),loc='center left') #
 	plot_alpha_ranges()
 
 
