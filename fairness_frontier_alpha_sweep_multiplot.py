@@ -31,7 +31,7 @@ class Person(Facility):
 
 # Person(theta[i],maxCoord = sizeRegion)
 dumpFileName='last_dist_frontier_one_trial_10pts.pickle'
-saving = False
+saving = True
 loading = True
 dumping = not loading
 
@@ -224,7 +224,6 @@ def get_n_colors(number_desired_colors):
 	return colors
 
 
-
 def plot_tradeoff(best,frontiers,saving=False):
 	global SWB_prob
 	# fig, ax = plt.subplots(figsize=(10,10))
@@ -272,9 +271,23 @@ def plot_tradeoff(best,frontiers,saving=False):
 		labels_at_inst = {inst: f"${min(ll:=[the_fn.weight for the_fn,the_instance in best.items() if the_instance == inst]):.02f}-{max(ll):.02f}$" for inst in instances}
 		inst_x_values = {inst : inst.fstars_type0[SWB_prob] for inst in instances}
 		inst_y_values = {inst : inst.fstars[SWB_prob] for inst in instances}
+		too_close = True
+
+		tol = .03
+		while too_close:
+			too_close=False
+			for inst in instances:
+				for other in instances:
+					if inst != other:
+						if 0 < inst_y_values[inst] - inst_y_values[other] < tol:
+							inst_y_values[inst] += .01
+							too_close=True
+						elif 0 < inst_y_values[other] - inst_y_values[inst] < tol:
+							inst_y_values[other] += .01
+							too_close=True
 		for inst in instances:
-			xoffset= 0
-			yoffset=0.01
+			xoffset= 0.002
+			yoffset=.01
 			ax.text(inst_x_values[inst] + xoffset,inst_y_values[inst] + yoffset,labels_at_inst[inst],fontsize=8,zorder=10)
 	plot_alpha_labels()
 
@@ -290,19 +303,24 @@ def plot_tradeoff(best,frontiers,saving=False):
 			inst = insts_at_ranges[(lb,ub)]
 			yvals_type0.extend([(yy:=inst.fstars_type0[SWB_prob]),yy])
 			yvals_pop.extend([(yy:=inst.fstars[SWB_prob]),yy])
-		ax1color="blue"
+		objcolors = get_n_colors(2)
+		ax1color= objcolors.pop(0)
 		ax1line = ax1.plot(xvals,yvals_pop,label="$\\sum P(Success)$ for Population",color=ax1color)
 		ax1.set_xlabel("$\\alpha$")
 		ax1.set_ylabel('$\\sum P(Success)$ for Population')
 		ax1.tick_params(axis="y",labelcolor=ax1color)
 		ax2=ax1.twinx()
-		ax2color="red"
+
+		ax2color= objcolors.pop(0)
 		ax2line = ax2.plot(xvals,yvals_type0,label="$\\sum P(Success)$ for Type-$0$ Individuals",color=ax2color)
 		ax2.set_ylabel('$\\sum P(Success)$ for Type-$0$ Individuals',color=ax2color)
 		ax2.tick_params(axis="y",labelcolor=ax2color)
-
 		ax1_legend = {artistlist[0].properties().get('label') : artistlist[0] for artistlist in [ax1line,ax2line]}
 		ax1.legend(ax1_legend.values(),ax1_legend.keys(),loc='center left') #
+
+		for tick,ticklabel in zip(ax1.get_xticks(),ax1.get_xticklabels()):
+			ticklabel.set_color(sm.to_rgba(tick))
+		ax1.set_title("Utility at $\\alpha$-Fair Efficient Solutions")
 	plot_alpha_ranges()
 
 
@@ -336,7 +354,7 @@ def plot_tradeoff(best,frontiers,saving=False):
 	ax.set_ylabel(f"Utility to Population")
 	weight_string = ", ".join([str(weight) for weight in weights])
 	title = f"Efficient Frontier and $\\alpha$-Fair Efficient Solutions" #+f"\n(weights: {weight_string})"
-	plt.title(title)
+	ax.set_title(title)
 	plt.show(block=False)
 	if saving:
 		plt.savefig(f"figures/alpha_sweep_frontier_{generate_file_label()}.pdf", bbox_inches='tight')
