@@ -53,7 +53,7 @@ theta_low_indices = [i for i in range(nIndiv) if theta[i]==theta_low]
 
 beta = [0,1,-10] #[beta0, beta_theta >0, beta_r <0]
 
-weights = [1,10] #should all be >= 1
+weights = [0,0.8] #should all be >= 1
 log_prob_obj_fns = [sum_log_prob_weighted_factory(w) for w in weights]
 prob_obj_fns = [sum_prob_weighted_factory(w) for w in weights]
 dist_obj_fns= [sum_distance_weighted_factory(w) for w in weights]
@@ -179,7 +179,7 @@ def solve_multiple_frontier(saving=False):
 	indiv = [Person(theta[i],maxCoord = sizeRegion) for i in range(nIndiv)]
 	fac = [Facility(maxCoord = sizeRegion) for i in range(nFac)]
 	# dist = np.array([[person.dist(facility) for facility in fac] for person in indiv])
-	dist = pickle.load(open('last_dist_frontier_one_trial.pickle','rb'))
+	dist = pickle.load(open('last_dist_frontier_one_trial_10pts.pickle','rb'))
 	total_subsets = bbax.enumerator.choose(nFac,nSelectedFac)
 	for ind, gp in enumerate(bbax.bax_gen(nFac,nSelectedFac)):
 		if ind % 1000 == 0:
@@ -229,9 +229,9 @@ def plot_tradeoffs(best,frontiers,saving=False):
 	# fake_marker_map = {fn : f"${fn.marker}^{{{fn.coeff}}}$" for fn in best}
 	line_artists = []
 	nPlots = len(frontiers)
-	gs = gridspec.GridSpec(nrows=1,ncols=nPlots,width_ratios=np.ones(nPlots))
-	fig = plt.figure(figsize=(5*nPlots,5))
-	fig.subplots_adjust(hspace=0.4)
+	gs = gridspec.GridSpec(nrows=nPlots,ncols=1,height_ratios=np.ones(nPlots))
+	fig = plt.figure(figsize=(5,5*nPlots))
+	fig.subplots_adjust(hspace=0.14)
 
 
 	for i, (plot_fn,plot_frontier) in enumerate(frontiers.items()):
@@ -249,7 +249,7 @@ def plot_tradeoffs(best,frontiers,saving=False):
 			else:
 				alpha=0.7
 				ls = "--"
-				label = f"Vales of {plot_fn.basebasename}\non Efficient Frontier of {fn.basebasename}"
+				label = f"Values of {plot_fn.basebasename}\non Efficient Frontier of {fn.basebasename}"
 
 			ax.plot(
 			        x_raw,y_raw,
@@ -263,9 +263,9 @@ def plot_tradeoffs(best,frontiers,saving=False):
 		line_artists.extend(ax.collections.copy() + ax.lines.copy())
 		legend_dict = {artist.properties().get('label') : artist for artist in line_artists}
 		plt.legend(legend_dict.values(),legend_dict.keys(),loc='best')
-		ax.set_xlabel(f"{plot_fn.basebasename}-Utility\nfor type-{theta_low}")
+		ax.set_xlabel(f"{plot_fn.basebasename}-Utility for type-{theta_low}")
 		ax.set_ylabel(f"{plot_fn.basebasename}-Utility\nfor Entire Population")
-		ax.set_title(f"'{plot_fn.basebasename}' Values\nof Other Efficient Solutions")
+		ax.set_title(f"'{plot_fn.basebasename}' Values of Other Efficient Solutions")
 
 	plt.show(block=False)
 	if saving:
